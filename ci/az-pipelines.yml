@@ -1,0 +1,69 @@
+name: 1.0.$(BuildID)$(rev:.r)
+
+resources:
+  repositories:
+    - repository: AzPipelinesTpl
+      type: 'github'
+      name: 'Fazzani/azurepipelines'
+      endpoint: 'GitHub'
+
+pool:
+  vmImage: $(imageName)
+
+pr:
+  branches:
+    include:
+    - master
+    - develop
+    - refs/tags/v*
+  paths:
+    exclude:
+    - docs/*
+    - README.md
+
+trigger:
+  branches:
+    include:
+    - master
+    - develop
+    - refs/tags/v*
+  paths:
+    exclude:
+    - docs/*
+    - readme.md
+
+variables:
+  buildConfiguration: 'Release'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+strategy:
+  matrix:
+    linux:
+     imageName: 'ubuntu-16.04'
+     runtime: linux-x64
+#    windows:
+#      imageName: 'windows-2019'
+steps:
+- ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
+  - template: ci/az-dotnet-core.yml@AzPipelinesTpl
+    parameters:
+      buildConfiguration: $(buildConfiguration)
+
+- ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+  - task: DotNetCoreCLI@2
+    displayName: '.NET publish $(buildConfiguration)'
+    inputs:
+      projects: 'src/ReleaseNotes/ReleaseNotes.csproj'
+      command: custom
+      custom: publish
+      publishWebProjects: false
+      arguments: '-c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory) -r $(runtime) /p:PublishSingleFile=true /p:PublishTrimmed=true'
+  - task: GitHubRelease@0
+    inputs:
+      gitHubConnection: GitHub
+      repositoryName: az-release-notes
+      action: create
+      target: '$(build.sourceVersion)'
+      tagSource: 'manual'
+      assetUploadMode: 'replace'
+      tag: $(Build.BuildNumber)
