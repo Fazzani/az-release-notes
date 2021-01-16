@@ -35,35 +35,66 @@ trigger:
 variables:
   buildConfiguration: 'Release'
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+jobs:
+- job: Build
+  displayName: Build
+  strategy:
+    matrix:
+      linux:
+       imageName: 'ubuntu-latest'
+       runtime: linux-x64
+      windows:
+        imageName: 'windows-latest'
+        runtime: win10-x64
+  steps:
+  - ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/tags/v')) }}:
+    - template: ci/az-dotnet-core.yml@AzPipelinesTpl
+      parameters:
+        buildConfiguration: $(buildConfiguration)
 
-strategy:
-  matrix:
-    linux:
-     imageName: 'ubuntu-16.04'
-     runtime: linux-x64
-#    windows:
-#      imageName: 'windows-2019'
-steps:
-- ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
-  - template: ci/az-dotnet-core.yml@AzPipelinesTpl
-    parameters:
-      buildConfiguration: $(buildConfiguration)
-
-- ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
-  - task: DotNetCoreCLI@2
-    displayName: '.NET publish $(buildConfiguration)'
+  - ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/v') }}:
+    - bash: |
+        GIT_LAST_TAG=$(git describe --abbrev=0)
+        GIT_LAST_TAG=${GIT_LAST_TAG:-v1.0.0}
+        echo "##vso[task.setvariable variable=GIT_LAST_TAG]$GIT_LAST_TAG"
+        echo "##vso[task.setvariable variable=ASS_VERSION]${GIT_LAST_TAG:1}"
+        echo "##vso[build.updatebuildnumber]$GIT_LAST_TAG"
+      displayName: 'Set version variables'
+    - task: DotNetCoreCLI@2
+      displayName: '.NET publish $(buildConfiguration)'
+      inputs:
+        command: publish
+        publishWebProjects: false
+        verbosityRestore: minimal
+        zipAfterPublish: false
+        projects: 'src/ReleaseNotes/ReleaseNotes.csproj'
+        arguments: '-c $(buildConfiguration) -r $(runtime) -o output/$(runtime) -p:PublishSingleFile=true -p:PublishTrimmed=true -p:AssemblyVersion=$(ASS_VERSION) -p:FileVersion=$(ASS_VERSION) -p:Version=$(ASS_VERSION) -p:InformationalVersion=$(ASS_VERSION)'
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: 'output/$(runtime)'
+        includeRootFolder: false
+        archiveType: 'zip' # Options: zip, 7z, tar, wim
+        #tarCompression: 'gz' # Optional. Options: gz, bz2, xz, none
+        archiveFile: '$(Build.ArtifactStagingDirectory)/rnotes-$(runtime).zip'
+    - task: PublishBuildArtifacts@1
+      inputs:
+        artifactName: 'rnotes-$(runtime)'
+- job: Publish
+  displayName: Publish Github Release
+  dependsOn: Build
+  condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - task: DownloadBuildArtifacts@0
+    displayName: "Download artifacts"
     inputs:
-      projects: 'src/ReleaseNotes/ReleaseNotes.csproj'
-      command: custom
-      custom: publish
-      publishWebProjects: false
-      arguments: '-c $(buildConfiguration) -o $(Build.ArtifactStagingDirectory) -r $(runtime) /p:PublishSingleFile=true /p:PublishTrimmed=true'
+      downloadType: specific
   - task: GitHubRelease@0
+    displayName: 'Publish Github release $(Build.BuildNumber)'
     inputs:
       gitHubConnection: GitHub
-      repositoryName: az-release-notes
+      repositoryName: fazzani/az-release-notes
       action: create
-      target: '$(build.sourceVersion)'
-      tagSource: 'manual'
-      assetUploadMode: 'replace'
-      tag: $(Build.BuildNumber)
+      assetUploadMode: replace
+      assets: '$(Build.ArtifactStagingDirectory)/**/*.zip'

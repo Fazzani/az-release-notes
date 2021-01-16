@@ -1,19 +1,12 @@
 ﻿# .Net Azure devops Release notes
 
+[![Build Status](https://dev.azure.com/henifazzani/SynkerAPI/_apis/build/status/ReleaseNotes?repoName=Fazzani%2Faz-release-notes&branchName=master)](https://dev.azure.com/henifazzani/SynkerAPI/_build/latest?definitionId=32&repoName=Fazzani%2Faz-release-notes&branchName=master)
+
 .net core tool that help to generate a release notes from azure devops board.
 A new Wiki page will be generated as result.
 
-## TODO
+## Setup
 
-- [ ] [Portable version][self-contained]
-- [ ] release notes strategies (tags or iterations) support
-- [ ] Dockerfile
-- [ ] Add support Webhooks for new ReleaseNotes
-- [ ] Insert new link for new added release into the summary page
-- [ ] Release note template from url
-- [ ] Add tag url (commit)
-- [x] Add sub page for each release
-- [x] Add cli skils (arguments support)
-- [x] Release notes template customization (hbs)
-
-[self-contained]:https://dev.to/pluralsight/creating-trimmed-self-contained-executables-in-net-core-4m08
+```shell
+source <(wget --no-cache -qO- https://gist.github.com/Fazzani/0c8a6d8344aef3256a1836a96dc5f314/raw/)
+```

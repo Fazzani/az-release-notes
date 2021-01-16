@@ -19,7 +19,7 @@ namespace ReleaseNotes
         private static async Task<int> Main(string[] args)
         {
             Configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables()
                 .Build();
@@ -36,7 +36,7 @@ namespace ReleaseNotes
 
             try
             {
-                Log.Information("app starting");
+                Log.Debug("app starting");
                 return await CreateHostBuilder().RunCommandLineApplicationAsync<ReleaseNotesCmd>(args).ConfigureAwait(false);
 
             }
@@ -47,7 +47,7 @@ namespace ReleaseNotes
             }
             finally
             {
-                Log.Information("app terminated");
+                Log.Debug("app terminated");
                 Log.CloseAndFlush();
             }
         }

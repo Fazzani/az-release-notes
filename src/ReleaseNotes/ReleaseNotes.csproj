@@ -3,6 +3,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
+    <PackageId>rnotes</PackageId>
+    <Company>Synker</Company>
+    <AssemblyName>rnotes</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

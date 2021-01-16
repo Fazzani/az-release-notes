@@ -18,13 +18,11 @@ namespace ReleaseNotes
     internal class ReleaseNotesCmd
     {
         private readonly ILogger<ReleaseNotesCmd> _logger;
-        private readonly IConsole _console;
         private readonly IReleaseNotesService _releaseNotesService;
 
-        public ReleaseNotesCmd(ILogger<ReleaseNotesCmd> logger, IConsole console, IReleaseNotesService releaseNotesService)
+        public ReleaseNotesCmd(ILogger<ReleaseNotesCmd> logger, IReleaseNotesService releaseNotesService)
         {
             _logger = logger;
-            _console = console;
             _releaseNotesService = releaseNotesService;
         }
 
@@ -58,13 +56,13 @@ namespace ReleaseNotes
             return 0;
         }
 
-        [Option("-o|--organization", "Organization url", CommandOptionType.SingleValue)]
+        [Option("-o|--organization", "Azure devops organization url", CommandOptionType.SingleValue)]
         public string OrgUrl { get; } = Environment.GetEnvironmentVariable("System.CollectionUri");
 
         [Option("-p|--project", "Azure devops project name", CommandOptionType.SingleValue)]
         public string VssProjectName { get; set; } = Environment.GetEnvironmentVariable("System.TeamProject");
 
-        [Option(Description = "Wiki project name", ShortName = "r")]
+        [Option(Description = "Azure devops wiki project name", ShortName = "r")]
         public string ReleaseNotesProjectName { get; set; }
 
         [Option("-t|--team", "Wiki team name", CommandOptionType.SingleValue)]
@@ -79,7 +77,7 @@ namespace ReleaseNotes
         [Option("-q|--query", "Query Id Or Path: used to retreive release notes work items", CommandOptionType.SingleValue)]
         public string Query { get; set; }
 
-        [Option("-v|--version", "Overrite release notes version", CommandOptionType.SingleValue)]
+        [Option("-rv|--relver", "Overrite release notes version", CommandOptionType.SingleValue)]
         public string ReleaseNoteVersion { get; set; }
 
         [Option("-i|--iteration", "Iteration offset (ex: +1, -1)", CommandOptionType.SingleValue)]
@@ -92,6 +90,6 @@ namespace ReleaseNotes
         public bool Override { get; set; } = false;
 
         private static string GetVersion()
-            => typeof(ReleaseNotesCmd).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+            => $"v{typeof(ReleaseNotesCmd).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion}";
     }
 }
