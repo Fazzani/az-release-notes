@@ -12,7 +12,7 @@ namespace ReleaseNotes
     [Command(
         Name = "rnotes",
         OptionsComparison = StringComparison.InvariantCultureIgnoreCase,
-        Description = "rnotes a CLI to create auto generate Release notes from azure devops")]
+        Description = "rnotes CLI help us to generate Release notes from azure devops")]
     [HelpOption("--help")]
     [VersionOptionFromMember("--version", MemberName = nameof(GetVersion))]
     internal class ReleaseNotesCmd
@@ -80,10 +80,10 @@ namespace ReleaseNotes
         [Option("-rv|--relver", "Overrite release notes version", CommandOptionType.SingleValue)]
         public string ReleaseNoteVersion { get; set; }
 
-        [Option("-i|--iteration", "Iteration offset (ex: +1, -1)", CommandOptionType.SingleValue)]
+        [Option("-i|--iteration", "Iteration offset (ex: +1, -1). The arg maybe be a rang (ex: .., 1..3) ", CommandOptionType.SingleValue)]
         public string IterationOffset { get; set; } = "0";
 
-        [Option("-d|--dry", "If true, the release will be displayed on console", CommandOptionType.NoValue)]
+        [Option("-d|--dry", "If true, the generated release content will be displayed on console", CommandOptionType.NoValue)]
         public bool DryRun { get; set; } = false;
 
         [Option("-f|--force", "Force recreate existed wiki pages", CommandOptionType.NoValue)]

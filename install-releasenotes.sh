@@ -6,7 +6,6 @@ echo "Current Version: $CUR_VERSION => New Version: $NEW_VERSION"
 
 if [[ "$NEW_VERSION" != "$CUR_VERSION" ]]; then
 
-  PWD=$(pwd)
   echo "Installing version $NEW_VERSION"
 
   cd /tmp/
@@ -27,7 +26,7 @@ if [[ "$NEW_VERSION" != "$CUR_VERSION" ]]; then
 
   chmod +x $HOME/.rnotes/rnotes
 
-  cd $PWD
+  cd -
 
   location="$(which rnotes)"
   echo "rnotes binary location: $location"

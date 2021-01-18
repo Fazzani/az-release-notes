@@ -5,6 +5,8 @@
 .net core tool that help to generate a release notes from azure devops board.
 A new Wiki page will be generated as result.
 
+![overview](https://i.imgur.com/da15IPJ.png)
+
 ## Setup
 
 ```shell

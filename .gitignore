@@ -365,3 +365,5 @@ FodyWeavers.xsd
 .vscode/
 **/.vs/
 *.suo
+Logs/*
+wget-log*

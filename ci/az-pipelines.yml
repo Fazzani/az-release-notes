@@ -19,7 +19,7 @@ pr:
   paths:
     exclude:
     - docs/*
-    - README.md
+    - Readme.md
 
 trigger:
   branches:
@@ -30,7 +30,7 @@ trigger:
   paths:
     exclude:
     - docs/*
-    - readme.md
+    - Readme.md
 
 variables:
   buildConfiguration: 'Release'
