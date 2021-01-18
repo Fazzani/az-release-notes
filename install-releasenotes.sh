@@ -1,6 +1,6 @@
 #!/bin/bash
 
-command -v rnotes >/dev/null 2>&1 && CUR_VERSION="$(rnotes --version | cut -d'v' -f2 | cut -c 3-5)" || CUR_VERSION="v0.0.0"
+command -v rnotes >/dev/null 2>&1 && CUR_VERSION="$(rnotes --version)" || CUR_VERSION="v0.0.0"
 NEW_VERSION="$(curl -s https://api.github.com/repos/fazzani/az-release-notes/releases/latest | jq -r '.tag_name')"
 echo "Current Version: $CUR_VERSION => New Version: $NEW_VERSION"
 

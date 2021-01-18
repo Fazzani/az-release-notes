@@ -13,7 +13,7 @@ namespace ReleaseNotes
         Name = "rnotes",
         OptionsComparison = StringComparison.InvariantCultureIgnoreCase,
         Description = "rnotes a CLI to create auto generate Release notes from azure devops")]
-    [HelpOption("-?")]
+    [HelpOption("--help")]
     [VersionOptionFromMember("--version", MemberName = nameof(GetVersion))]
     internal class ReleaseNotesCmd
     {

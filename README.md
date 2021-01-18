@@ -10,3 +10,22 @@ A new Wiki page will be generated as result.
 ```shell
 source <(wget --no-cache -qO- https://gist.github.com/Fazzani/0c8a6d8344aef3256a1836a96dc5f314/raw/)
 ```
+
+## Getting started
+
+rnotes --help
+
+![help](https://i.imgur.com/i3VN09Q.png)
+
+## Examples
+
+```shell
+export SYSTEM_ACCESSTOKEN="AZ-DEVOPS-PAT"
+rnotes --organization "https://dev.azure.com/up-group" \
+--porject Up.France.ODI \
+-r Uptimise \
+--team "App - Financeur" \
+-n "Home/Applications/Uptimise/ReleaseNotes/" \
+-q "4c8cfb27-5726-4124-88ef-a24bd8a3035a" \
+-i 0
+```
