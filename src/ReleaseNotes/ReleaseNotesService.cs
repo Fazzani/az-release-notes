@@ -255,7 +255,7 @@ namespace ReleaseNotes
             }
             if (iterationOffset < 0)
             {
-                return iterations.Where(x => x.Attributes.TimeFrame == TimeFrame.Past).ToArray()[^Math.Abs(iterationOffset - 1)];
+                return iterations.Where(x => x.Attributes.TimeFrame == TimeFrame.Past).ToArray()[^Math.Abs(iterationOffset)];
             }
             if (iterationOffset > 0)
             {
