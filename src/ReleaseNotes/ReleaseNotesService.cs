@@ -46,7 +46,8 @@ namespace ReleaseNotes
 
                 foreach (var iter in selectedIterations)
                 {
-                    var notes = await GetWorkItems(witClient, appContext, iter, cancellationToken).ToListAsync().ConfigureAwait(false);
+                    var notes = await GetWorkItems(witClient, appContext, iter, cancellationToken)
+                        .ToListAsync(cancellationToken).ConfigureAwait(false);
 
                     _logger.LogInformation($"{notes.Count} notes was retreived");
 
@@ -135,7 +136,7 @@ namespace ReleaseNotes
             }
 
             var gitClient = await appContext.Connection.GetClientAsync<GitHttpClient>(cancellationToken).ConfigureAwait(false);
-            var repos = await gitClient.GetRepositoriesAsync(appContext.TeamProjectReference.Id).ConfigureAwait(false);
+            var repos = await gitClient.GetRepositoriesAsync(appContext.TeamProjectReference.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var repo = repos.FirstOrDefault(x => x.Name.Equals(appContext.GitRepoName, StringComparison.OrdinalIgnoreCase));
             if (repo == null)
@@ -168,7 +169,7 @@ namespace ReleaseNotes
             return tag.Name.Split('/').LastOrDefault();
         }
 
-        public async Task<string> GenerateContent(List<object> notes,
+        public async Task<string> GenerateContent(List<WorkItemRecord> notes,
                                                   string projectName = "Uptimise",
                                                   string version = "1.0.0",
                                                   CancellationToken cancellationToken = default)
@@ -181,12 +182,13 @@ namespace ReleaseNotes
                 ProjectName = projectName,
                 Date = DateTime.Now.ToShortDateString(),
                 Version = version,
-                Notes = notes
+                Features = notes.Where(x => x.WorkItemType == WorkItemType.Us),
+                Bugs = notes.Where(x => x.WorkItemType == WorkItemType.Bug),
             };
             return tpl(data);
         }
 
-        public async IAsyncEnumerable<object> GetWorkItems(WorkItemTrackingHttpClient witClient,
+        public async IAsyncEnumerable<WorkItemRecord> GetWorkItems(WorkItemTrackingHttpClient witClient,
                                                            AppContext appContext,
                                                            TeamSettingsIteration iter,
                                                            [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -198,13 +200,10 @@ namespace ReleaseNotes
             foreach (var item in res.WorkItems)
             {
                 var workitem = await witClient.GetWorkItemAsync(item.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
-                yield return new
-                {
-                    Title = workitem.Fields["System.Title"].ToString(),
+                yield return new WorkItemRecord(workitem.Fields["System.Title"].ToString(),
                     workitem.Id,
-                    Url = workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
-                    Type = workitem.Fields["System.WorkItemType"].ToString()
-                };
+                    workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
+                    Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()));
             }
         }
 

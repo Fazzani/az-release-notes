@@ -14,5 +14,15 @@ namespace ReleaseNotes
             var base64 = Convert.ToBase64String(bytes);
             return new MemoryStream(Encoding.UTF8.GetBytes(base64));
         }
+
+        internal static WorkItemType WorkItemTypeFromString(string type)
+        {
+            return type switch
+            {
+                "User Story" => WorkItemType.Us,
+                "Bug" => WorkItemType.Bug,
+                _ => WorkItemType.Us,
+            };
+        }
     }
 }

@@ -10,9 +10,9 @@ namespace ReleaseNotes
 {
     internal interface IReleaseNotesService
     {
-        Task<string> GenerateContent(List<object> notes, string projectName = "Uptimize", string version = "1.0.0", CancellationToken cancellationToken = default);
+        Task<string> GenerateContent(List<WorkItemRecord> notes, string projectName = "Uptimize", string version = "1.0.0", CancellationToken cancellationToken = default);
         Task<TeamProjectReference> GetTeamProjectByNameAsync(AppContext appContext);
-        IAsyncEnumerable<object> GetWorkItems(WorkItemTrackingHttpClient witClient, AppContext appContext, TeamSettingsIteration iter, [EnumeratorCancellation] CancellationToken cancellationToken);
+        IAsyncEnumerable<WorkItemRecord> GetWorkItems(WorkItemTrackingHttpClient witClient, AppContext appContext, TeamSettingsIteration iter, [EnumeratorCancellation] CancellationToken cancellationToken);
         Task UpdateOrCreateReleaseNotes(AppContext appContext, CancellationToken cancellationToken = default);
         Task<List<TeamSettingsIteration>> GetIterationsByProjectAsync(AppContext appContext,
                                                      CancellationToken cancellationToken = default);
