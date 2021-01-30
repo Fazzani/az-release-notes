@@ -175,7 +175,7 @@ namespace ReleaseNotes
                                                   CancellationToken cancellationToken = default)
         {
             Handlebars.RegisterTemplate("Note", _appOption.NoteTpl);
-            var hbs = await File.ReadAllTextAsync("release.hbs", cancellationToken).ConfigureAwait(false);
+            var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, "release.hbs"), cancellationToken).ConfigureAwait(false);
             var tpl = Handlebars.Compile(hbs);
             var data = new
             {

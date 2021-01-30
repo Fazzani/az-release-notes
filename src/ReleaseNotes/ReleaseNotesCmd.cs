@@ -57,10 +57,10 @@ namespace ReleaseNotes
         }
 
         [Option("-o|--organization", "Azure devops organization url", CommandOptionType.SingleValue)]
-        public string OrgUrl { get; } = Environment.GetEnvironmentVariable("System.CollectionUri");
+        public string OrgUrl { get; } = Environment.GetEnvironmentVariable("SYSTEM_COLLECTIONURI");
 
         [Option("-p|--project", "Azure devops project name", CommandOptionType.SingleValue)]
-        public string VssProjectName { get; set; } = Environment.GetEnvironmentVariable("System.TeamProject");
+        public string VssProjectName { get; set; } = Environment.GetEnvironmentVariable("SYSTEM_TEAMPROJECT");
 
         [Option(Description = "Azure devops wiki project name", ShortName = "r")]
         public string ReleaseNotesProjectName { get; set; }
