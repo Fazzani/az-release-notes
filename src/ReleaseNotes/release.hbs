@@ -1,8 +1,8 @@
 ﻿# {{{ ProjectName }}} release notes
 
-Date: **{{{ Date }}}**
-Version: **{{{ Version }}}**
+> **{{{ StartDate }}}** -- **{{ FinishDate }}**
 
+{{#if Features}}
 ## New Featues :smile:
 ---
 
@@ -10,10 +10,13 @@ Version: **{{{ Version }}}**
   * {{> Note }}
 {{/each}}
 
+{{/if}}
 
+{{#if Bugs}}
 ## Fixed Bugs :angry:
 ---
 
 {{#each Bugs }}
   * {{> Note }}
 {{/each}}
+{{/if}}

@@ -49,12 +49,14 @@ namespace ReleaseNotes
                     var notes = await GetWorkItems(witClient, appContext, iter, cancellationToken)
                         .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-                    _logger.LogInformation($"{notes.Count} notes was retreived");
+                    _logger.LogInformation($"{notes.Count} notes is retrieved");
 
                     if (notes.Count > 0)
                     {
                         var version = GetVersionBySprintStrategy(appContext, iter);
-                        var pageContent = await GenerateContent(notes, appContext.ReleaseNotesProjectName, version, cancellationToken).ConfigureAwait(false);
+                        var pageContent = await GenerateContent(
+                            new ReleaseContent(appContext.ReleaseNotesProjectName, iter.Attributes.StartDate, iter.Attributes.FinishDate, version, notes),
+                            cancellationToken).ConfigureAwait(false);
                         _logger.LogInformation("A new content generated");
 
                         if (appContext.DryRun)
@@ -88,7 +90,7 @@ namespace ReleaseNotes
 
             if (Int32.TryParse(appContext.IterationOffset, out int iterIndex))
             {
-                selectedIter = new[] { GetIterationByIndice(iterIndex, allIterations) };
+                selectedIter = new[] { GetIterationByIndex(iterIndex, allIterations) };
             }
             else
             {
@@ -169,21 +171,19 @@ namespace ReleaseNotes
             return tag.Name.Split('/').LastOrDefault();
         }
 
-        public async Task<string> GenerateContent(List<WorkItemRecord> notes,
-                                                  string projectName = "Uptimise",
-                                                  string version = "1.0.0",
-                                                  CancellationToken cancellationToken = default)
+        public async Task<string> GenerateContent(ReleaseContent releaseContent, CancellationToken cancellationToken = default)
         {
             Handlebars.RegisterTemplate("Note", _appOption.NoteTpl);
             var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, "release.hbs"), cancellationToken).ConfigureAwait(false);
             var tpl = Handlebars.Compile(hbs);
             var data = new
             {
-                ProjectName = projectName,
-                Date = DateTime.Now.ToShortDateString(),
-                Version = version,
-                Features = notes.Where(x => x.WorkItemType == WorkItemType.Us),
-                Bugs = notes.Where(x => x.WorkItemType == WorkItemType.Bug),
+                releaseContent.ProjectName,
+                StartDate = releaseContent.StartDate.GetValueOrDefault(DateTime.Now).ToShortDateString(),
+                FinishDate = releaseContent.FinishDate.GetValueOrDefault(DateTime.Now).ToShortDateString(),
+                releaseContent.Version,
+                Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us),
+                Bugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug),
             };
             return tpl(data);
         }
@@ -213,7 +213,7 @@ namespace ReleaseNotes
                 return new Wiql { Query = _appOption.Query };
 
             var q = await witClient.GetQueryAsync(appContext.TeamProjectReference.Id, appContext.Query, QueryExpand.All, 1, cancellationToken: cancellationToken).ConfigureAwait(false);
-            var query = Regex.Replace(q.Wiql, @"\[System\.IterationPath\]\s=\s'[^']+'", match => $"[System.IterationPath] = '{iter.Path}'", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+            var query = Regex.Replace(q.Wiql, @"\[System\.IterationPath\]\s=\s'[^']+'", _ => $"[System.IterationPath] = '{iter.Path}'", RegexOptions.Multiline | RegexOptions.IgnoreCase);
             return new Wiql { Query = query };
         }
 
@@ -233,20 +233,19 @@ namespace ReleaseNotes
                                                                 string teamName,
                                                                 CancellationToken cancellationToken)
         {
-            var teamClient = connection.GetClient<TeamHttpClient>();
+            var teamClient = connection.GetClient<TeamHttpClient>(cancellationToken);
             var teams = await teamClient.GetTeamsAsync(projectId.ToString(), cancellationToken: cancellationToken).ConfigureAwait(false);
             return teams.FirstOrDefault(x => x.Name == teamName);
         }
 
-        public async Task<List<TeamSettingsIteration>> GetIterationsByProjectAsync(AppContext appContext,
+        public Task<List<TeamSettingsIteration>> GetIterationsByProjectAsync(AppContext appContext,
                                                                                    CancellationToken cancellationToken = default)
         {
-            var client = appContext.Connection.GetClient<WorkHttpClient>();
-            return await client.GetTeamIterationsAsync(appContext.TeamContext,
-                                                                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            var client = appContext.Connection.GetClient<WorkHttpClient>(cancellationToken);
+            return client.GetTeamIterationsAsync(appContext.TeamContext, cancellationToken: cancellationToken);
         }
 
-        private static TeamSettingsIteration GetIterationByIndice(int iterationOffset, List<TeamSettingsIteration> iterations)
+        private static TeamSettingsIteration GetIterationByIndex(int iterationOffset, List<TeamSettingsIteration> iterations)
         {
             if (iterationOffset == 0)
             {
