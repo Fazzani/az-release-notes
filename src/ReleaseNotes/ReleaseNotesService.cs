@@ -23,6 +23,7 @@ namespace ReleaseNotes
     {
         private readonly ILogger<ReleaseNotesService> _logger;
         private readonly AppOptions _appOption;
+        private const string _sprintUrlFormat = "https://dev.azure.com/{0}/{1}/_sprints/taskboard/{2}/{1}/{3}";
 
         public ReleaseNotesService(ILogger<ReleaseNotesService> logger, IOptions<AppOptions> appAption)
         {
@@ -48,14 +49,16 @@ namespace ReleaseNotes
                 {
                     var notes = await GetWorkItems(witClient, appContext, iter, cancellationToken)
                         .ToListAsync(cancellationToken).ConfigureAwait(false);
-
                     _logger.LogInformation($"{notes.Count} notes is retrieved");
 
                     if (notes.Count > 0)
                     {
                         var version = GetVersionBySprintStrategy(appContext, iter);
+                        var orgName = appContext.Connection.Uri.Segments[1];
+                        var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Name));
                         var pageContent = await GenerateContent(
-                            new ReleaseContent(appContext.ReleaseNotesProjectName, iter.Attributes.StartDate, iter.Attributes.FinishDate, version, notes),
+                            new ReleaseContent(appContext.ReleaseNotesProjectName, iter.Attributes.StartDate,
+                                iter.Attributes.FinishDate, version, iter.Name, notes.Sum(x => x.OriginalEstimated), sprintLink, notes),
                             cancellationToken).ConfigureAwait(false);
                         _logger.LogInformation("A new content generated");
 
@@ -182,6 +185,9 @@ namespace ReleaseNotes
                 StartDate = releaseContent.StartDate.GetValueOrDefault(DateTime.Now).ToShortDateString(),
                 FinishDate = releaseContent.FinishDate.GetValueOrDefault(DateTime.Now).ToShortDateString(),
                 releaseContent.Version,
+                releaseContent.IterationName,
+                releaseContent.Velocity,
+                releaseContent.SprintLink,
                 Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us),
                 Bugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug),
             };
@@ -197,13 +203,21 @@ namespace ReleaseNotes
 
             var res = await witClient.QueryByWiqlAsync(q, appContext.TeamContext, top: 100, cancellationToken: cancellationToken).ConfigureAwait(false);
 
+
             foreach (var item in res.WorkItems)
             {
                 var workitem = await witClient.GetWorkItemAsync(item.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
+                var originalEstimate = 0;
+                if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.OriginalEstimate", out var originalEstimateValue))
+                {
+                    originalEstimate = Convert.ToInt32(originalEstimateValue);
+                }
+
                 yield return new WorkItemRecord(workitem.Fields["System.Title"].ToString(),
                     workitem.Id,
                     workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
-                    Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()));
+                    Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()),
+                    originalEstimate);
             }
         }
 
