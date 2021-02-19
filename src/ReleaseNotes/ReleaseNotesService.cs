@@ -88,7 +88,6 @@ namespace ReleaseNotes
         private async Task<TeamSettingsIteration[]> GetSelectedIterations(AppContext appContext, CancellationToken cancellationToken)
         {
             var allIterations = await GetIterationsByProjectAsync(appContext, cancellationToken).ConfigureAwait(false);
-
             var selectedIter = allIterations.ToArray();
 
             if (Int32.TryParse(appContext.IterationOffset, out int iterIndex))
@@ -176,7 +175,6 @@ namespace ReleaseNotes
 
         public async Task<string> GenerateContent(ReleaseContent releaseContent, CancellationToken cancellationToken = default)
         {
-            Handlebars.RegisterTemplate("Note", _appOption.NoteTpl);
             var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, "release.hbs"), cancellationToken).ConfigureAwait(false);
             var tpl = Handlebars.Compile(hbs);
             var data = new
@@ -188,8 +186,8 @@ namespace ReleaseNotes
                 releaseContent.IterationName,
                 releaseContent.Velocity,
                 releaseContent.SprintLink,
-                Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us),
-                Bugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug),
+                Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us).Select(x => x.Id),
+                Bugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug).Select(x => x.Id),
             };
             return tpl(data);
         }
@@ -200,9 +198,7 @@ namespace ReleaseNotes
                                                            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var q = await GetQuery(witClient, appContext, iter, cancellationToken).ConfigureAwait(false);
-
             var res = await witClient.QueryByWiqlAsync(q, appContext.TeamContext, top: 100, cancellationToken: cancellationToken).ConfigureAwait(false);
-
 
             foreach (var item in res.WorkItems)
             {
