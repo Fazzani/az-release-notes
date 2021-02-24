@@ -32,5 +32,6 @@ namespace ReleaseNotes
         public string Query { get; internal set; }
         public string IterationOffset { get; internal set; } = "0";
         public bool Override { get; internal set; }
+        public string MajorVersion { get; internal set; }
     }
 }

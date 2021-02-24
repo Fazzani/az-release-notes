@@ -53,7 +53,7 @@ namespace ReleaseNotes
 
                     if (notes.Count > 0)
                     {
-                        var version = GetVersionBySprintStrategy(appContext, iter);
+                        var version = GetVersionBySprintStrategy(appContext, iter, appContext.MajorVersion);
                         var orgName = appContext.Connection.Uri.Segments[1];
                         var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Name));
                         var pageContent = await GenerateContent(
@@ -74,7 +74,7 @@ namespace ReleaseNotes
                             if (azureAction == Wiki.Wiki.AzureDevopsActionEnum.Update && !appContext.Override)
                                 return;
                             var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.Connection, appContext.TeamProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
-                            _logger.LogInformation($"New Release notes page created here {wikiResponse.Page.RemoteUrl}");
+                            _logger.LogInformation($"New Release notes page was created here {wikiResponse.Page.RemoteUrl}");
                         }
                     }
                 }
@@ -115,7 +115,7 @@ namespace ReleaseNotes
 
         public string GetVersionBySprintStrategy(AppContext appContext,
                                                   TeamSettingsIteration iteration,
-                                                  string versionSuffix = "v2.")
+                                                  string versionPrefix)
         {
             if (!string.IsNullOrEmpty(appContext.ReleaseNoteVersion))
             {
@@ -124,7 +124,7 @@ namespace ReleaseNotes
 
             var sprint = new Regex(@"\d+$").Match(iteration.Name);
             if (sprint.Success)
-                return $"{versionSuffix}{sprint.Value}.0";
+                return $"{versionPrefix}.{sprint.Value}.0";
 
             return appContext.ReleaseNoteVersion;
         }

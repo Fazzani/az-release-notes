@@ -46,7 +46,8 @@ namespace ReleaseNotes
                 Query = Query,
                 DryRun = DryRun,
                 IterationOffset = IterationOffset,
-                Override = Override
+                Override = Override,
+                MajorVersion = SemverMajorVersion
             };
 
             // Create a connection
@@ -79,6 +80,9 @@ namespace ReleaseNotes
 
         [Option("-rv|--relver", "Overrite release notes version", CommandOptionType.SingleValue)]
         public string ReleaseNoteVersion { get; set; }
+
+        [Option("-mv|--majorVersion", "Semver Major version", CommandOptionType.SingleValue)]
+        public string SemverMajorVersion { get; set; } = "v2";
 
         [Option("-i|--iteration", "Iteration offset (ex: +1, -1). The arg maybe be a rang (ex: .., 1..3) ", CommandOptionType.SingleValue)]
         public string IterationOffset { get; set; } = "0";
