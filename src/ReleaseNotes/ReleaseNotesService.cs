@@ -23,7 +23,7 @@ namespace ReleaseNotes
     {
         private readonly ILogger<ReleaseNotesService> _logger;
         private readonly AppOptions _appOption;
-        private const string _sprintUrlFormat = "https://dev.azure.com/{0}/{1}/_sprints/taskboard/{2}/{1}/{3}";
+        private const string _sprintUrlFormat = "https://dev.azure.com/{0}/{1}/_sprints/taskboard/{2}/{3}";
 
         public ReleaseNotesService(ILogger<ReleaseNotesService> logger, IOptions<AppOptions> appAption)
         {
@@ -55,7 +55,7 @@ namespace ReleaseNotes
                     {
                         var version = GetVersionBySprintStrategy(appContext, iter, appContext.MajorVersion);
                         var orgName = appContext.Connection.Uri.Segments[1];
-                        var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Name));
+                        var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
                         var pageContent = await GenerateContent(
                             new ReleaseContent(appContext.ReleaseNotesProjectName, iter.Attributes.StartDate,
                                 iter.Attributes.FinishDate, version, iter.Name, notes.Sum(x => x.OriginalEstimated), sprintLink, notes),
