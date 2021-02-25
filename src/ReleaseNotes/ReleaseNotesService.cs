@@ -24,7 +24,7 @@ namespace ReleaseNotes
         private readonly ILogger<ReleaseNotesService> _logger;
         private readonly AppOptions _appOption;
         private const string _sprintUrlFormat = "https://dev.azure.com/{0}/{1}/_sprints/taskboard/{2}/{3}";
-        const string BoardColumnNameDone = "Done";
+        private TeamContextFactory _teamContextFactory;
 
         public ReleaseNotesService(ILogger<ReleaseNotesService> logger, IOptions<AppOptions> appAption)
         {
@@ -44,6 +44,8 @@ namespace ReleaseNotes
                                                                  teamName: appContext.TeamName,
                                                                  cancellationToken).ConfigureAwait(false);
 
+                _teamContextFactory = new TeamContextFactory(appContext.WebApiTeam.Name);
+
                 var selectedIterations = await GetSelectedIterations(appContext, cancellationToken).ConfigureAwait(false);
 
                 foreach (var iter in selectedIterations)
@@ -58,8 +60,14 @@ namespace ReleaseNotes
                         var orgName = appContext.Connection.Uri.Segments[1];
                         var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
                         var pageContent = await GenerateContent(
-                            new ReleaseContent(appContext.ReleaseNotesProjectName, iter.Attributes.StartDate,
-                                iter.Attributes.FinishDate, version, iter.Name, notes.Where(x => x.BoradColumn.Equals(BoardColumnNameDone)).Sum(x => x.StoryPoint), sprintLink, notes),
+                            new ReleaseContent(appContext.ReleaseNotesProjectName,
+                                               iter.Attributes.StartDate,
+                                               iter.Attributes.FinishDate,
+                                               version,
+                                               iter.Name,
+                                               _teamContextFactory.GetVelocity(notes),
+                                               sprintLink,
+                                               notes),
                             cancellationToken).ConfigureAwait(false);
                         _logger.LogInformation("A new content generated");
 
@@ -176,23 +184,9 @@ namespace ReleaseNotes
 
         public async Task<string> GenerateContent(ReleaseContent releaseContent, CancellationToken cancellationToken = default)
         {
-            var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, "release.hbs"), cancellationToken).ConfigureAwait(false);
+            var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, _teamContextFactory.GetHbsTemplateName()), cancellationToken).ConfigureAwait(false);
             var tpl = Handlebars.Compile(hbs);
-            var data = new
-            {
-                releaseContent.ProjectName,
-                StartDate = releaseContent.StartDate.GetValueOrDefault(DateTime.Now).ToShortDateString(),
-                FinishDate = releaseContent.FinishDate.GetValueOrDefault(DateTime.Now).ToShortDateString(),
-                releaseContent.Version,
-                releaseContent.IterationName,
-                releaseContent.Velocity,
-                releaseContent.SprintLink,
-                Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us && x.BoradColumn.Equals(BoardColumnNameDone)).Select(x => x.Id),
-                UatBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && x.BoradColumn.Equals(BoardColumnNameDone) && x.IsMantis).Select(x => x.Id),
-                OthersBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && x.BoradColumn.Equals(BoardColumnNameDone) && !x.IsMantis).Select(x => x.Id),
-                PreviewFeatures = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us && !x.BoradColumn.Equals(BoardColumnNameDone)).Select(x => x.Id),
-                PreviewBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && !x.BoradColumn.Equals(BoardColumnNameDone) && !x.IsMantis).Select(x => x.Id),
-            };
+            var data = _teamContextFactory.GetContentDate(releaseContent);
             return tpl(data);
         }
 
