@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ReleaseNotes
 {
-    internal record WorkItemRecord(string Title, int? Id, string Url, WorkItemType WorkItemType, int OriginalEstimated);
+    internal record WorkItemRecord(string Title, int? Id, string Url, WorkItemType WorkItemType, int OriginalEstimated, int StoryPoint, string BoradColumn, bool IsMantis);
 
     internal record ReleaseContent(string ProjectName, DateTime? StartDate, DateTime? FinishDate, string Version,
         string IterationName,

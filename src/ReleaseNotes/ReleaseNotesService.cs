@@ -24,6 +24,7 @@ namespace ReleaseNotes
         private readonly ILogger<ReleaseNotesService> _logger;
         private readonly AppOptions _appOption;
         private const string _sprintUrlFormat = "https://dev.azure.com/{0}/{1}/_sprints/taskboard/{2}/{3}";
+        const string BoardColumnNameDone = "Done";
 
         public ReleaseNotesService(ILogger<ReleaseNotesService> logger, IOptions<AppOptions> appAption)
         {
@@ -58,7 +59,7 @@ namespace ReleaseNotes
                         var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
                         var pageContent = await GenerateContent(
                             new ReleaseContent(appContext.ReleaseNotesProjectName, iter.Attributes.StartDate,
-                                iter.Attributes.FinishDate, version, iter.Name, notes.Sum(x => x.OriginalEstimated), sprintLink, notes),
+                                iter.Attributes.FinishDate, version, iter.Name, notes.Where(x => x.BoradColumn.Equals(BoardColumnNameDone)).Sum(x => x.StoryPoint), sprintLink, notes),
                             cancellationToken).ConfigureAwait(false);
                         _logger.LogInformation("A new content generated");
 
@@ -186,8 +187,11 @@ namespace ReleaseNotes
                 releaseContent.IterationName,
                 releaseContent.Velocity,
                 releaseContent.SprintLink,
-                Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us).Select(x => x.Id),
-                Bugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug).Select(x => x.Id),
+                Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us && x.BoradColumn.Equals(BoardColumnNameDone)).Select(x => x.Id),
+                UatBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && x.BoradColumn.Equals(BoardColumnNameDone) && x.IsMantis).Select(x => x.Id),
+                OthersBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && x.BoradColumn.Equals(BoardColumnNameDone) && !x.IsMantis).Select(x => x.Id),
+                PreviewFeatures = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us && !x.BoradColumn.Equals(BoardColumnNameDone)).Select(x => x.Id),
+                PreviewBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && !x.BoradColumn.Equals(BoardColumnNameDone) && !x.IsMantis).Select(x => x.Id),
             };
             return tpl(data);
         }
@@ -204,16 +208,24 @@ namespace ReleaseNotes
             {
                 var workitem = await witClient.GetWorkItemAsync(item.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
                 var originalEstimate = 0;
+                var storyPoint = 0;
                 if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.OriginalEstimate", out var originalEstimateValue))
                 {
                     originalEstimate = Convert.ToInt32(originalEstimateValue);
+                }
+                if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StoryPoints", out var storyPointValue))
+                {
+                    storyPoint = Convert.ToInt32(storyPointValue);
                 }
 
                 yield return new WorkItemRecord(workitem.Fields["System.Title"].ToString(),
                     workitem.Id,
                     workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
                     Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()),
-                    originalEstimate);
+                    originalEstimate,
+                    storyPoint,
+                    workitem.Fields["System.BoardColumn"].ToString(),
+                    workitem.Fields.ContainsKey("Custom.StatutMantis") && !string.IsNullOrEmpty(workitem.Fields["Custom.StatutMantis"].ToString()));
             }
         }
 
