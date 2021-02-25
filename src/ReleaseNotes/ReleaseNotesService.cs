@@ -24,6 +24,7 @@ namespace ReleaseNotes
         private readonly ILogger<ReleaseNotesService> _logger;
         private readonly AppOptions _appOption;
         private const string _sprintUrlFormat = "https://dev.azure.com/{0}/{1}/_sprints/taskboard/{2}/{3}";
+        private TeamContextFactory _teamContextFactory;
 
         public ReleaseNotesService(ILogger<ReleaseNotesService> logger, IOptions<AppOptions> appAption)
         {
@@ -43,6 +44,8 @@ namespace ReleaseNotes
                                                                  teamName: appContext.TeamName,
                                                                  cancellationToken).ConfigureAwait(false);
 
+                _teamContextFactory = new TeamContextFactory(appContext.WebApiTeam.Name);
+
                 var selectedIterations = await GetSelectedIterations(appContext, cancellationToken).ConfigureAwait(false);
 
                 foreach (var iter in selectedIterations)
@@ -57,8 +60,14 @@ namespace ReleaseNotes
                         var orgName = appContext.Connection.Uri.Segments[1];
                         var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
                         var pageContent = await GenerateContent(
-                            new ReleaseContent(appContext.ReleaseNotesProjectName, iter.Attributes.StartDate,
-                                iter.Attributes.FinishDate, version, iter.Name, notes.Sum(x => x.OriginalEstimated), sprintLink, notes),
+                            new ReleaseContent(appContext.ReleaseNotesProjectName,
+                                               iter.Attributes.StartDate,
+                                               iter.Attributes.FinishDate,
+                                               version,
+                                               iter.Name,
+                                               _teamContextFactory.GetVelocity(notes),
+                                               sprintLink,
+                                               notes),
                             cancellationToken).ConfigureAwait(false);
                         _logger.LogInformation("A new content generated");
 
@@ -175,20 +184,9 @@ namespace ReleaseNotes
 
         public async Task<string> GenerateContent(ReleaseContent releaseContent, CancellationToken cancellationToken = default)
         {
-            var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, "release.hbs"), cancellationToken).ConfigureAwait(false);
+            var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, _teamContextFactory.GetHbsTemplateName()), cancellationToken).ConfigureAwait(false);
             var tpl = Handlebars.Compile(hbs);
-            var data = new
-            {
-                releaseContent.ProjectName,
-                StartDate = releaseContent.StartDate.GetValueOrDefault(DateTime.Now).ToShortDateString(),
-                FinishDate = releaseContent.FinishDate.GetValueOrDefault(DateTime.Now).ToShortDateString(),
-                releaseContent.Version,
-                releaseContent.IterationName,
-                releaseContent.Velocity,
-                releaseContent.SprintLink,
-                Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us).Select(x => x.Id),
-                Bugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug).Select(x => x.Id),
-            };
+            var data = _teamContextFactory.GetContentDate(releaseContent);
             return tpl(data);
         }
 
@@ -204,16 +202,24 @@ namespace ReleaseNotes
             {
                 var workitem = await witClient.GetWorkItemAsync(item.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
                 var originalEstimate = 0;
+                var storyPoint = 0;
                 if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.OriginalEstimate", out var originalEstimateValue))
                 {
                     originalEstimate = Convert.ToInt32(originalEstimateValue);
+                }
+                if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StoryPoints", out var storyPointValue))
+                {
+                    storyPoint = Convert.ToInt32(storyPointValue);
                 }
 
                 yield return new WorkItemRecord(workitem.Fields["System.Title"].ToString(),
                     workitem.Id,
                     workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
                     Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()),
-                    originalEstimate);
+                    originalEstimate,
+                    storyPoint,
+                    workitem.Fields["System.BoardColumn"].ToString(),
+                    workitem.Fields.ContainsKey("Custom.StatutMantis") && !string.IsNullOrEmpty(workitem.Fields["Custom.StatutMantis"].ToString()));
             }
         }
 
