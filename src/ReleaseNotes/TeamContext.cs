@@ -28,7 +28,7 @@ namespace ReleaseNotes
             return _isBMC ? "releaseBmc.hbs" : "release.hbs";
         }
 
-        internal object GetContentDate(ReleaseContent releaseContent)
+        internal object GetContentData(ReleaseContent releaseContent)
         {
             if (_isBMC)
             {
@@ -41,11 +41,11 @@ namespace ReleaseNotes
                     releaseContent.IterationName,
                     releaseContent.Velocity,
                     releaseContent.SprintLink,
-                    Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us && x.BoradColumn.Equals(BoardColumnNameDone)).Select(x => x.Id),
-                    UatBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && x.BoradColumn.Equals(BoardColumnNameDone) && x.IsMantis).Select(x => x.Id),
-                    OthersBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && x.BoradColumn.Equals(BoardColumnNameDone) && !x.IsMantis).Select(x => x.Id),
-                    PreviewFeatures = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us && !x.BoradColumn.Equals(BoardColumnNameDone)).Select(x => x.Id),
-                    PreviewBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && !x.BoradColumn.Equals(BoardColumnNameDone) && !x.IsMantis).Select(x => x.Id),
+                    Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us && x.BoradColumn.Equals(BoardColumnNameDone)).Select(x => x.Id).ToList(),
+                    UatBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && x.BoradColumn.Equals(BoardColumnNameDone) && x.IsMantis).Select(x => new { x.Id, x.MantisId }).ToList(),
+                    OthersBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && x.BoradColumn.Equals(BoardColumnNameDone) && !x.IsMantis).Select(x => x.Id).ToList(),
+                    PreviewFeatures = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us && !x.BoradColumn.Equals(BoardColumnNameDone)).Select(x => x.Id).ToList(),
+                    PreviewBugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug && !x.BoradColumn.Equals(BoardColumnNameDone) && !x.IsMantis).Select(x => x.Id).ToList(),
                 };
             }
             return new

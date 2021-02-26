@@ -2,7 +2,7 @@
   "profiles": {
     "ReleaseNotes": {
       "commandName": "Project",
-      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.ODI -r Uptimise -t \"App - Financeur\" -n \"Home/Applications/Uptimise/ReleaseNotes/\" -q \"4c8cfb27-5726-4124-88ef-a24bd8a3035a\" -i -1 -f -d"
+      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.ODI -r BMC -t \"App - Bureau Metier\" -n \"Home/Applications/Bureau-Metier-Commerçant/Release Notes/\" -q \"d4d5b57a-2ba7-4d60-afe2-82402a3fb6d1\" -i 0 -mv v1 -f -d"
     }
   }
 }

@@ -5,7 +5,7 @@
 > Velocity **{{{ Velocity }}}**
 
 {{#if Features}}
-## New Features :smile:
+## New Features :smile: ({{ Features.Count }})
 ---
 
 {{#each Features }}
@@ -15,16 +15,16 @@
 {{/if}}
 
 {{#if UatBugs}}
-## Fixed UAT Bugs :smile:
+## Fixed UAT Bugs :angry: ({{ UatBugs.Count }})
 ---
 
 {{#each UatBugs }}
-  * #{{{ . }}}
+  * #{{{ Id }}} (Réf. Mantis: {{{MantisId}}})
 {{/each}}
 {{/if}}
 
 {{#if OthersBugs}}
-## Fixed Others Bugs :smile:
+## Fixed Others Bugs :angry: ({{ OthersBugs.Count }})
 ---
 
 {{#each OthersBugs }}
@@ -33,7 +33,7 @@
 {{/if}}
 
 {{#if PreviewFeatures}}
-## Preview Features :smile:
+## Preview Features :smile: ({{ PreviewFeatures.Count }})
 ---
 
 {{#each PreviewFeatures }}
@@ -42,7 +42,7 @@
 {{/if}}
 
 {{#if PreviewBugs}}
-## Preview Fixed Bugs :smile:
+## Preview Fixed Bugs :angry: ({{ PreviewBugs.Count }})
 ---
 
 {{#each PreviewBugs }}

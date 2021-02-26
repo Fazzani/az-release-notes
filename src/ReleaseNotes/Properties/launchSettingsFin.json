@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ReleaseNotes": {
+      "commandName": "Project",
+      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.ODI -r Uptimise -t \"App - Financeur\" -n \"Home/Applications/Uptimise/ReleaseNotes/\" -q \"4c8cfb27-5726-4124-88ef-a24bd8a3035a\" -i -1 -f -d"
+    }
+  }
+}

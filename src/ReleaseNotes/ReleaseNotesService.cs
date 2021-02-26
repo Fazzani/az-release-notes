@@ -25,6 +25,7 @@ namespace ReleaseNotes
         private readonly AppOptions _appOption;
         private const string _sprintUrlFormat = "https://dev.azure.com/{0}/{1}/_sprints/taskboard/{2}/{3}";
         private TeamContextFactory _teamContextFactory;
+        private (string MantisId, string MantisStatus) MantisColumnNames =  ( "Custom.b0c854eb-2dcc-46fe-8516-ecbbc703fae9", "Custom.StatutMantis");
 
         public ReleaseNotesService(ILogger<ReleaseNotesService> logger, IOptions<AppOptions> appAption)
         {
@@ -186,7 +187,7 @@ namespace ReleaseNotes
         {
             var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, _teamContextFactory.GetHbsTemplateName()), cancellationToken).ConfigureAwait(false);
             var tpl = Handlebars.Compile(hbs);
-            var data = _teamContextFactory.GetContentDate(releaseContent);
+            var data = _teamContextFactory.GetContentData(releaseContent);
             return tpl(data);
         }
 
@@ -203,10 +204,12 @@ namespace ReleaseNotes
                 var workitem = await witClient.GetWorkItemAsync(item.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
                 var originalEstimate = 0;
                 var storyPoint = 0;
+
                 if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.OriginalEstimate", out var originalEstimateValue))
                 {
                     originalEstimate = Convert.ToInt32(originalEstimateValue);
                 }
+
                 if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StoryPoints", out var storyPointValue))
                 {
                     storyPoint = Convert.ToInt32(storyPointValue);
@@ -219,7 +222,8 @@ namespace ReleaseNotes
                     originalEstimate,
                     storyPoint,
                     workitem.Fields["System.BoardColumn"].ToString(),
-                    workitem.Fields.ContainsKey("Custom.StatutMantis") && !string.IsNullOrEmpty(workitem.Fields["Custom.StatutMantis"].ToString()));
+                    workitem.Fields.ContainsKey(MantisColumnNames.MantisStatus) && !string.IsNullOrEmpty(workitem.Fields[MantisColumnNames.MantisStatus].ToString()),
+                    workitem.Fields.ContainsKey(MantisColumnNames.MantisId) ? workitem.Fields[MantisColumnNames.MantisId].ToString() : string.Empty);
             }
         }
 

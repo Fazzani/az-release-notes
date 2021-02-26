@@ -5,7 +5,7 @@
 > Velocity **{{{ Velocity }}}**
 
 {{#if Features}}
-## New Features :smile:
+## New Features :smile: ({{ Features.Count }})
 ---
 
 {{#each Features }}
@@ -14,38 +14,11 @@
 
 {{/if}}
 
-{{#if UatBugs}}
-## Fixed UAT Bugs :smile:
+{{#if Bugs}}
+## Fixed Bugs :angry: ({{ Bugs.Count }})
 ---
 
-{{#each UatBugs }}
-  * #{{{ . }}}
-{{/each}}
-{{/if}}
-
-{{#if OthersBugs}}
-## Fixed Others Bugs :smile:
----
-
-{{#each OthersBugs }}
-  * #{{{ . }}}
-{{/each}}
-{{/if}}
-
-{{#if PreviewFeatures}}
-## Preview Features :smile:
----
-
-{{#each PreviewFeatures }}
-  * #{{{ . }}}
-{{/each}}
-{{/if}}
-
-{{#if PreviewBugs}}
-## Preview Fixed Bugs :smile:
----
-
-{{#each PreviewBugs }}
+{{#each Bugs }}
   * #{{{ . }}}
 {{/each}}
 {{/if}}
