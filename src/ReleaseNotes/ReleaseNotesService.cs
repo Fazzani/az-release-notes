@@ -53,6 +53,7 @@ namespace ReleaseNotes
                 {
                     var notes = await GetWorkItems(witClient, appContext, iter, cancellationToken)
                         .ToListAsync(cancellationToken).ConfigureAwait(false);
+
                     _logger.LogInformation($"{notes.Count} notes is retrieved");
 
                     if (notes.Count > 0)
@@ -85,6 +86,7 @@ namespace ReleaseNotes
                                 return;
                             var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.Connection, appContext.TeamProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
                             _logger.LogInformation($"New Release notes page was created here {wikiResponse.Page.RemoteUrl}");
+                            Console.WriteLine($"##vso[task.complete result=Succeeded;]{wikiResponse.Page.RemoteUrl}");
                         }
                     }
                 }

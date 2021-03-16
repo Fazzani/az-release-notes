@@ -2,7 +2,7 @@
 
 > [**Sprint {{{ IterationName }}}** {{{ StartDate }}} - {{ FinishDate }}]({{ SprintLink }})
 
-> Velocity **{{{ Velocity }}}**
+> Velocity **{{{ Velocity }}}** for {{{ TotalItems }}} work items
 
 {{#if Features}}
 ## New Features :smile: ({{ Features.Count }})
@@ -46,6 +46,15 @@
 ---
 
 {{#each PreviewBugs }}
+  * #{{{ . }}}
+{{/each}}
+{{/if}}
+
+{{#if PreviewOthersBugs}}
+## Preview Others Bugs :angry: ({{ PreviewOthersBugs.Count }})
+---
+
+{{#each PreviewOthersBugs }}
   * #{{{ . }}}
 {{/each}}
 {{/if}}
