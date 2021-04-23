@@ -2,7 +2,7 @@
   "profiles": {
     "ReleaseNotes": {
       "commandName": "Project",
-      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.ODI -r BMC -t \"App - Bureau Metier\" -n \"Home/Applications/Bureau-Metier-Commerçant/Release Notes/\" -q \"f1672d42-9be8-45be-bc0b-274934ba9c70\" -i 0 -mv v1 -f -d"
+      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.BMC -r Up.France.BMC.wiki -t \"Up.France.BMC Team\" -n \"Bureau Metier Commercant (BMC)/Release Notes/\" -q \"63820c3c-61ff-4b7a-9830-5fb5b2278812\" -i 0 -mv v1 -f"
     }
   }
 }
