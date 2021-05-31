@@ -18,8 +18,7 @@ namespace ReleaseNotes
 
         internal int GetVelocity(IEnumerable<WorkItemRecord> notes)
         {
-            return _isBMC ? notes.Where(x => x.BoradColumn.Equals(BoardColumnNameDone)).Sum(x => x.StoryPoint) :
-                notes.Sum(x => x.OriginalEstimated);
+            return notes.Where(x => x.BoradColumn.Equals(BoardColumnNameDone)).Sum(x => x.StoryPoint);
         }
 
         internal string GetHbsTemplateName()
