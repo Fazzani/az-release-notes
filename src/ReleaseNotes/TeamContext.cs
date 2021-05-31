@@ -12,13 +12,13 @@ namespace ReleaseNotes
 
         public TeamContextFactory(string teamName = "")
         {
-
-            _isBMC = teamName.Equals("App - Bureau Metier", StringComparison.InvariantCultureIgnoreCase);
+            _isBMC = teamName.Contains("BMC", StringComparison.InvariantCultureIgnoreCase);
         }
 
         internal int GetVelocity(IEnumerable<WorkItemRecord> notes)
         {
-            return notes.Where(x => x.BoradColumn.Equals(BoardColumnNameDone)).Sum(x => x.StoryPoint);
+            return _isBMC ? notes.Where(x => x.BoradColumn.Equals(BoardColumnNameDone)).Sum(x => x.StoryPoint) :
+                notes.Sum(x => x.StoryPoint);
         }
 
         internal string GetHbsTemplateName()
@@ -59,7 +59,7 @@ namespace ReleaseNotes
                 releaseContent.IterationName,
                 releaseContent.Velocity,
                 releaseContent.SprintLink,
-                TotalItems = releaseContent.WorkItems.Count(),
+                TotalItems = releaseContent.WorkItems.Count,
                 Features = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Us).Select(x => x.Id).ToList(),
                 Bugs = releaseContent.WorkItems.Where(x => x.WorkItemType == WorkItemType.Bug).Select(x => x.Id).ToList(),
             };
