@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -38,7 +37,6 @@ namespace ReleaseNotes
             {
                 Log.Debug("app starting");
                 return await CreateHostBuilder().RunCommandLineApplicationAsync<ReleaseNotesCmd>(args).ConfigureAwait(false);
-
             }
             catch (Exception ex)
             {

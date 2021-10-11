@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ReleaseNotes
 {
@@ -24,5 +25,7 @@ namespace ReleaseNotes
                 _ => WorkItemType.Us,
             };
         }
+
+        public static bool IsSprintRelease(this string version) => !string.IsNullOrEmpty(version) && new Regex(@"v\d+\.\d+\.0").IsMatch(version);
     }
 }

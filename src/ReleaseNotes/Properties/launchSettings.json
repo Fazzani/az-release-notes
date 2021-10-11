@@ -2,7 +2,7 @@
   "profiles": {
     "ReleaseNotes": {
       "commandName": "Project",
-      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.BMC -r Up.France.BMC.wiki -t \"Up.France.BMC Team\" -n \"Bureau Metier Commercant (BMC)/Release Notes/\" -q \"63820c3c-61ff-4b7a-9830-5fb5b2278812\" -i -1 -mv v1 -f"
+      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.Financeur -r Up.France.Financeur.Uptimise -t \"Up.France.Financeur Uptimise\" -n \"Home/Releases Notes/\" -q \"3953d752-eb73-49da-b590-d8e624a65095\" -i -1 -f -rv \"v2.23.5\" -c \"55e86345eba2f1b0d975457d8a491abf5037818b\""
     }
   }
 }

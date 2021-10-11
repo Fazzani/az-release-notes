@@ -25,12 +25,74 @@ namespace ReleaseNotes
         private readonly AppOptions _appOption;
         private const string _sprintUrlFormat = "https://dev.azure.com/{0}/{1}/_sprints/taskboard/{2}/{3}";
         private TeamContextFactory _teamContextFactory;
-        private (string MantisId, string MantisStatus) MantisColumnNames =  ( "Custom.b0c854eb-2dcc-46fe-8516-ecbbc703fae9", "Custom.StatutMantis");
+        private (string MantisId, string MantisStatus) MantisColumnNames = ("Custom.b0c854eb-2dcc-46fe-8516-ecbbc703fae9", "Custom.StatutMantis");
 
         public ReleaseNotesService(ILogger<ReleaseNotesService> logger, IOptions<AppOptions> appAption)
         {
             _logger = logger;
             _appOption = appAption?.Value;
+        }
+
+        public async Task UpdateOrCreateReleaseNotesFromCommit(AppContext appContext, CancellationToken cancellationToken = default)
+        {
+            var witClient = appContext.Connection.GetClient<WorkItemTrackingHttpClient>(cancellationToken);
+
+            try
+            {
+                appContext.TeamProjectReference = await GetTeamProjectByNameAsync(appContext).ConfigureAwait(false);
+                appContext.WebApiTeam = await GetTeamByNameAsync(appContext.Connection,
+                                                                 appContext.TeamProjectReference.Id,
+                                                                 teamName: appContext.TeamName,
+                                                                 cancellationToken).ConfigureAwait(false);
+
+                _teamContextFactory = new TeamContextFactory(appContext.WebApiTeam.Name);
+
+                var gitClient = await appContext.Connection.GetClientAsync<GitHttpClient>(cancellationToken).ConfigureAwait(false);
+                var commit = await gitClient.GetCommitAsync(appContext.TeamProjectReference.Id, appContext.CommitId, appContext.RepositoryId, cancellationToken: cancellationToken).ConfigureAwait(false);
+                var wiRegex = new Regex(@"(#\d+)", RegexOptions.Multiline);
+                var match = wiRegex.Matches(commit.Comment);
+                var workItems = match.Select(x => int.Parse(x.Value.Replace("#", string.Empty))).ToList();
+                var notes = await GetWorkItemsById(witClient, workItems, cancellationToken).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+                _logger.LogInformation($"{notes.Count} notes is retrieved");
+
+                if (notes.Count > 0)
+                {
+                    var orgName = appContext.Connection.Uri.Segments[1];
+                    //var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
+                    var pageContent = await GenerateContent(
+                        new ReleaseContent(appContext.ReleaseNotesProjectName,
+                                           default,
+                                           default,
+                                           appContext.ReleaseNoteVersion,
+                                           default,
+                                           _teamContextFactory.GetVelocity(notes),
+                                           default,
+                                           notes),
+                        cancellationToken).ConfigureAwait(false);
+                    _logger.LogInformation("A new content generated");
+
+                    if (appContext.DryRun)
+                    {
+                        Console.WriteLine(pageContent);
+                    }
+                    else
+                    {
+                        var pagePath = $"{appContext.PageReleaseNotePath}{appContext.ReleaseNoteVersion}";
+                        _logger.LogInformation($"Creating new release notes page at {pagePath}");
+                        var (pageResponse, azureAction) = await Wiki.Wiki.GetOrCreateWikiPage(appContext.Connection, appContext.TeamProjectReference.Id, pagePath).ConfigureAwait(false);
+                        if (azureAction == Wiki.Wiki.AzureDevopsActionEnum.Update && !appContext.Override)
+                            return;
+                        var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.Connection, appContext.TeamProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
+                        _logger.LogInformation($"New Release notes page was created here {wikiResponse.Page.RemoteUrl}");
+                        Console.WriteLine($"##vso[task.complete result=Succeeded;]{wikiResponse.Page.RemoteUrl}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+            }
         }
 
         public async Task UpdateOrCreateReleaseNotes(AppContext appContext, CancellationToken cancellationToken = default)
@@ -97,7 +159,8 @@ namespace ReleaseNotes
             }
         }
 
-        private async Task<TeamSettingsIteration[]> GetSelectedIterations(AppContext appContext, CancellationToken cancellationToken)
+        private async Task<TeamSettingsIteration[]> GetSelectedIterations(AppContext appContext,
+                                                                          CancellationToken cancellationToken)
         {
             var allIterations = await GetIterationsByProjectAsync(appContext, cancellationToken).ConfigureAwait(false);
             var selectedIter = allIterations.ToArray();
@@ -126,8 +189,8 @@ namespace ReleaseNotes
         }
 
         public string GetVersionBySprintStrategy(AppContext appContext,
-                                                  TeamSettingsIteration iteration,
-                                                  string versionPrefix)
+                                                 TeamSettingsIteration iteration,
+                                                 string versionPrefix)
         {
             if (!string.IsNullOrEmpty(appContext.ReleaseNoteVersion))
             {
@@ -141,62 +204,20 @@ namespace ReleaseNotes
             return appContext.ReleaseNoteVersion;
         }
 
-        public async ValueTask<string> GetVersionByTagStrategy(AppContext appContext,
-                                                  TeamSettingsIteration iteration,
-                                                  string versionSuffix = "v2.",
-                                                  CancellationToken cancellationToken = default)
-        {
-            if (!string.IsNullOrEmpty(appContext.ReleaseNoteVersion))
-            {
-                return appContext.ReleaseNoteVersion;
-            }
-
-            var gitClient = await appContext.Connection.GetClientAsync<GitHttpClient>(cancellationToken).ConfigureAwait(false);
-            var repos = await gitClient.GetRepositoriesAsync(appContext.TeamProjectReference.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            var repo = repos.FirstOrDefault(x => x.Name.Equals(appContext.GitRepoName, StringComparison.OrdinalIgnoreCase));
-            if (repo == null)
-            {
-                return appContext.ReleaseNoteVersion;
-            }
-            var tags = await gitClient.GetTagRefsAsync(repo.Id, cancellationToken).ConfigureAwait(false);
-            var tag = tags.LastOrDefault();
-
-            if (iteration.Attributes.FinishDate.HasValue)
-            {
-                for (int i = 1; i < tags.Count; i++)
-                {
-                    tag = tags[^i];
-                    var annotatedTag = await gitClient.GetAnnotatedTagAsync(appContext.TeamContext.ProjectId.Value, repo.Id, tag.ObjectId, cancellationToken: cancellationToken).ConfigureAwait(false);
-                    if (annotatedTag.TaggedBy.Date <= iteration.Attributes.FinishDate)
-                    {
-                        if (annotatedTag.TaggedBy.Date <= iteration.Attributes.StartDate)
-                        {
-                            _logger.LogWarning($"No git tag was founded in this timeframe {iteration.Attributes.StartDate} {iteration.Attributes.FinishDate}");
-                            //calculate version from iteration
-                            var sprint = new Regex(@"\d+$").Match(iteration.Name);
-                            if (sprint.Success)
-                                return $"{versionSuffix}{sprint.Value}.0";
-                        }
-                        break;
-                    }
-                }
-            }
-            return tag.Name.Split('/').LastOrDefault();
-        }
-
         public async Task<string> GenerateContent(ReleaseContent releaseContent, CancellationToken cancellationToken = default)
         {
-            var hbs = await File.ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, _teamContextFactory.GetHbsTemplateName()), cancellationToken).ConfigureAwait(false);
+            var hbs = await File
+                .ReadAllTextAsync(Path.Join(AppDomain.CurrentDomain.BaseDirectory, _teamContextFactory.GetHbsTemplateName()), cancellationToken)
+                .ConfigureAwait(false);
             var tpl = Handlebars.Compile(hbs);
             var data = _teamContextFactory.GetContentData(releaseContent);
             return tpl(data);
         }
 
         public async IAsyncEnumerable<WorkItemRecord> GetWorkItems(WorkItemTrackingHttpClient witClient,
-                                                           AppContext appContext,
-                                                           TeamSettingsIteration iter,
-                                                           [EnumeratorCancellation] CancellationToken cancellationToken)
+                                                                   AppContext appContext,
+                                                                   TeamSettingsIteration iter,
+                                                                   [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var q = await GetQuery(witClient, appContext, iter, cancellationToken).ConfigureAwait(false);
             var res = await witClient.QueryByWiqlAsync(q, appContext.TeamContext, top: 100, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -229,7 +250,42 @@ namespace ReleaseNotes
             }
         }
 
-        private async ValueTask<Wiql> GetQuery(WorkItemTrackingHttpClient witClient, AppContext appContext, TeamSettingsIteration iter, CancellationToken cancellationToken)
+        public async IAsyncEnumerable<WorkItemRecord> GetWorkItemsById(WorkItemTrackingHttpClient witClient,
+                                                                       List<int> workitemsId,
+                                                                       [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            foreach (var item in workitemsId)
+            {
+                var workitem = await witClient.GetWorkItemAsync(item, cancellationToken: cancellationToken).ConfigureAwait(false);
+                var originalEstimate = 0;
+                var storyPoint = 0;
+
+                if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.OriginalEstimate", out var originalEstimateValue))
+                {
+                    originalEstimate = Convert.ToInt32(originalEstimateValue);
+                }
+
+                if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StoryPoints", out var storyPointValue))
+                {
+                    storyPoint = Convert.ToInt32(storyPointValue);
+                }
+
+                yield return new WorkItemRecord(workitem.Fields["System.Title"].ToString(),
+                    workitem.Id,
+                    workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
+                    Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()),
+                    originalEstimate,
+                    storyPoint,
+                    workitem.Fields.ContainsKey("System.BoardColumn") ? workitem.Fields["System.BoardColumn"].ToString() : string.Empty,
+                    workitem.Fields.ContainsKey(MantisColumnNames.MantisStatus) && !string.IsNullOrEmpty(workitem.Fields[MantisColumnNames.MantisStatus].ToString()),
+                    workitem.Fields.ContainsKey(MantisColumnNames.MantisId) ? workitem.Fields[MantisColumnNames.MantisId].ToString() : string.Empty);
+            }
+        }
+
+        private async ValueTask<Wiql> GetQuery(WorkItemTrackingHttpClient witClient,
+                                               AppContext appContext,
+                                               TeamSettingsIteration iter,
+                                               CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(appContext.Query))
                 return new Wiql { Query = _appOption.Query };

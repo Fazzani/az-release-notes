@@ -47,13 +47,18 @@ namespace ReleaseNotes
                 DryRun = DryRun,
                 IterationOffset = IterationOffset,
                 Override = Override,
-                MajorVersion = SemverMajorVersion
+                MajorVersion = SemverMajorVersion,
+                CommitId = CommitId,
+                RepositoryId = RepositoryId
             };
 
             // Create a connection
             appContext.Connection = new VssConnection(appContext.OrgUrl, new VssBasicCredential(string.Empty, PAT));
 
-            await _releaseNotesService.UpdateOrCreateReleaseNotes(appContext, cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(appContext.CommitId))
+                await _releaseNotesService.UpdateOrCreateReleaseNotesFromCommit(appContext, cancellationToken).ConfigureAwait(false);
+            else
+                await _releaseNotesService.UpdateOrCreateReleaseNotes(appContext, cancellationToken).ConfigureAwait(false);
             return 0;
         }
 
@@ -92,6 +97,12 @@ namespace ReleaseNotes
 
         [Option("-f|--force", "Force recreate existed wiki pages", CommandOptionType.NoValue)]
         public bool Override { get; set; } = false;
+
+        [Option("-c|--commit", "Commit Id", CommandOptionType.SingleValue)]
+        public string CommitId { get; set; } = Environment.GetEnvironmentVariable("COMMIT_ID");
+
+        [Option("-repo|--repositoryId", "Repository Id", CommandOptionType.SingleValue)]
+        public string RepositoryId { get; set; } = Environment.GetEnvironmentVariable("REPOSITORY_ID");
 
         private static string GetVersion()
             => $"v{typeof(ReleaseNotesCmd).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion}";

@@ -16,5 +16,6 @@ namespace ReleaseNotes
         Task UpdateOrCreateReleaseNotes(AppContext appContext, CancellationToken cancellationToken = default);
         Task<List<TeamSettingsIteration>> GetIterationsByProjectAsync(AppContext appContext,
                                                      CancellationToken cancellationToken = default);
+        Task UpdateOrCreateReleaseNotesFromCommit(AppContext appContext, CancellationToken cancellationToken = default);
     }
 }
