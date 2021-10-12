@@ -11,7 +11,7 @@ namespace ReleaseNotes
     internal interface IReleaseNotesService
     {
         Task<string> GenerateContent(ReleaseContent releaseContent, CancellationToken cancellationToken = default);
-        Task<TeamProjectReference> GetTeamProjectByNameAsync(AppContext appContext);
+        Task<TeamProjectReference> GetTeamProjectByNameAsync(ProjectHttpClient projectClient, string projectName);
         IAsyncEnumerable<WorkItemRecord> GetWorkItems(WorkItemTrackingHttpClient witClient, AppContext appContext, TeamSettingsIteration iter, [EnumeratorCancellation] CancellationToken cancellationToken);
         Task UpdateOrCreateReleaseNotes(AppContext appContext, CancellationToken cancellationToken = default);
         Task<List<TeamSettingsIteration>> GetIterationsByProjectAsync(AppContext appContext,

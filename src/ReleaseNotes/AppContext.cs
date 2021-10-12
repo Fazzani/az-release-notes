@@ -21,7 +21,8 @@ namespace ReleaseNotes
                 return new TeamContext(TeamProjectReference.Id, WebApiTeam.Id);
             }
         }
-        public VssConnection Connection { get; set; }
+        public VssConnection WikiConnection { get; set; }
+        public VssConnection VssConnection { get; set; }
 
         public TeamProjectReference TeamProjectReference { get; set; }
         public WebApiTeam WebApiTeam { get; set; }
@@ -34,6 +35,7 @@ namespace ReleaseNotes
         public bool Override { get; internal set; }
         public string MajorVersion { get; internal set; }
         public string CommitId { get; internal set; }
-        public string RepositoryId { get; internal set; }
+        public Guid RepositoryId { get; internal set; }
+        public TeamProjectReference ReleaseNoteProjectReference { get; internal set; }
     }
 }

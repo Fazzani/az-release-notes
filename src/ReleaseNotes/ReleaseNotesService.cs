@@ -35,19 +35,20 @@ namespace ReleaseNotes
 
         public async Task UpdateOrCreateReleaseNotesFromCommit(AppContext appContext, CancellationToken cancellationToken = default)
         {
-            var witClient = appContext.Connection.GetClient<WorkItemTrackingHttpClient>(cancellationToken);
+            var witClient = appContext.VssConnection.GetClient<WorkItemTrackingHttpClient>(cancellationToken);
 
             try
             {
-                appContext.TeamProjectReference = await GetTeamProjectByNameAsync(appContext).ConfigureAwait(false);
-                appContext.WebApiTeam = await GetTeamByNameAsync(appContext.Connection,
+                appContext.TeamProjectReference = await GetTeamProjectByNameAsync(appContext.VssConnection.GetClient<ProjectHttpClient>(), appContext.VssProjectName).ConfigureAwait(false);
+                appContext.ReleaseNoteProjectReference = await GetTeamProjectByNameAsync(appContext.VssConnection.GetClient<ProjectHttpClient>(), appContext.ReleaseNotesProjectName).ConfigureAwait(false);
+                appContext.WebApiTeam = await GetTeamByNameAsync(appContext.VssConnection,
                                                                  appContext.TeamProjectReference.Id,
                                                                  teamName: appContext.TeamName,
                                                                  cancellationToken).ConfigureAwait(false);
 
                 _teamContextFactory = new TeamContextFactory(appContext.WebApiTeam.Name);
 
-                var gitClient = await appContext.Connection.GetClientAsync<GitHttpClient>(cancellationToken).ConfigureAwait(false);
+                var gitClient = await appContext.VssConnection.GetClientAsync<GitHttpClient>(cancellationToken).ConfigureAwait(false);
                 var commit = await gitClient.GetCommitAsync(appContext.TeamProjectReference.Id, appContext.CommitId, appContext.RepositoryId, cancellationToken: cancellationToken).ConfigureAwait(false);
                 var wiRegex = new Regex(@"(#\d+)", RegexOptions.Multiline);
                 var match = wiRegex.Matches(commit.Comment);
@@ -58,7 +59,7 @@ namespace ReleaseNotes
 
                 if (notes.Count > 0)
                 {
-                    var orgName = appContext.Connection.Uri.Segments[1];
+                    var orgName = appContext.VssConnection.Uri.Segments[1];
                     //var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
                     var pageContent = await GenerateContent(
                         new ReleaseContent(appContext.ReleaseNotesProjectName,
@@ -80,10 +81,10 @@ namespace ReleaseNotes
                     {
                         var pagePath = $"{appContext.PageReleaseNotePath}{appContext.ReleaseNoteVersion}";
                         _logger.LogInformation($"Creating new release notes page at {pagePath}");
-                        var (pageResponse, azureAction) = await Wiki.Wiki.GetOrCreateWikiPage(appContext.Connection, appContext.TeamProjectReference.Id, pagePath).ConfigureAwait(false);
+                        var (pageResponse, azureAction) = await Wiki.Wiki.GetOrCreateWikiPage(appContext.VssConnection, appContext.ReleaseNoteProjectReference.Id, pagePath).ConfigureAwait(false);
                         if (azureAction == Wiki.Wiki.AzureDevopsActionEnum.Update && !appContext.Override)
                             return;
-                        var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.Connection, appContext.TeamProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
+                        var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.VssConnection, appContext.ReleaseNoteProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
                         _logger.LogInformation($"New Release notes page was created here {wikiResponse.Page.RemoteUrl}");
                         Console.WriteLine($"##vso[task.complete result=Succeeded;]{wikiResponse.Page.RemoteUrl}");
                     }
@@ -97,12 +98,12 @@ namespace ReleaseNotes
 
         public async Task UpdateOrCreateReleaseNotes(AppContext appContext, CancellationToken cancellationToken = default)
         {
-            var witClient = appContext.Connection.GetClient<WorkItemTrackingHttpClient>(cancellationToken);
+            var witClient = appContext.VssConnection.GetClient<WorkItemTrackingHttpClient>(cancellationToken);
 
             try
             {
-                appContext.TeamProjectReference = await GetTeamProjectByNameAsync(appContext).ConfigureAwait(false);
-                appContext.WebApiTeam = await GetTeamByNameAsync(appContext.Connection,
+                appContext.TeamProjectReference = await GetTeamProjectByNameAsync(appContext.VssConnection.GetClient<ProjectHttpClient>(), appContext.VssProjectName).ConfigureAwait(false);
+                appContext.WebApiTeam = await GetTeamByNameAsync(appContext.VssConnection,
                                                                  appContext.TeamProjectReference.Id,
                                                                  teamName: appContext.TeamName,
                                                                  cancellationToken).ConfigureAwait(false);
@@ -121,7 +122,7 @@ namespace ReleaseNotes
                     if (notes.Count > 0)
                     {
                         var version = GetVersionBySprintStrategy(appContext, iter, appContext.MajorVersion);
-                        var orgName = appContext.Connection.Uri.Segments[1];
+                        var orgName = appContext.VssConnection.Uri.Segments[1];
                         var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
                         var pageContent = await GenerateContent(
                             new ReleaseContent(appContext.ReleaseNotesProjectName,
@@ -143,10 +144,10 @@ namespace ReleaseNotes
                         {
                             var pagePath = $"{appContext.PageReleaseNotePath}{version}";
                             _logger.LogInformation($"Creating new release notes page at {pagePath}");
-                            var (pageResponse, azureAction) = await Wiki.Wiki.GetOrCreateWikiPage(appContext.Connection, appContext.TeamProjectReference.Id, pagePath).ConfigureAwait(false);
+                            var (pageResponse, azureAction) = await Wiki.Wiki.GetOrCreateWikiPage(appContext.VssConnection, appContext.TeamProjectReference.Id, pagePath).ConfigureAwait(false);
                             if (azureAction == Wiki.Wiki.AzureDevopsActionEnum.Update && !appContext.Override)
                                 return;
-                            var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.Connection, appContext.TeamProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
+                            var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.VssConnection, appContext.TeamProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
                             _logger.LogInformation($"New Release notes page was created here {wikiResponse.Page.RemoteUrl}");
                             Console.WriteLine($"##vso[task.complete result=Succeeded;]{wikiResponse.Page.RemoteUrl}");
                         }
@@ -295,15 +296,14 @@ namespace ReleaseNotes
             return new Wiql { Query = query };
         }
 
-        public async Task<TeamProjectReference> GetTeamProjectByNameAsync(AppContext appContext)
+        public async Task<TeamProjectReference> GetTeamProjectByNameAsync(ProjectHttpClient projectClient, string projectName)
         {
-            var projectClient = appContext.Connection.GetClient<ProjectHttpClient>();
             var projects = await projectClient.GetProjects(ProjectState.All).ConfigureAwait(false);
-            while (projects.All(x => x.Name != appContext.VssProjectName && !string.IsNullOrEmpty(projects.ContinuationToken)))
+            while (projects.All(x => x.Name != projectName && !string.IsNullOrEmpty(projects.ContinuationToken)))
             {
                 projects = await projectClient.GetProjects(ProjectState.All, continuationToken: projects.ContinuationToken).ConfigureAwait(false);
             }
-            return projects.FirstOrDefault(x => x.Name == appContext.VssProjectName);
+            return projects.FirstOrDefault(x => x.Name == projectName);
         }
 
         public static async Task<WebApiTeam> GetTeamByNameAsync(VssConnection connection,
@@ -319,7 +319,7 @@ namespace ReleaseNotes
         public Task<List<TeamSettingsIteration>> GetIterationsByProjectAsync(AppContext appContext,
                                                                                    CancellationToken cancellationToken = default)
         {
-            var client = appContext.Connection.GetClient<WorkHttpClient>(cancellationToken);
+            var client = appContext.VssConnection.GetClient<WorkHttpClient>(cancellationToken);
             return client.GetTeamIterationsAsync(appContext.TeamContext, cancellationToken: cancellationToken);
         }
 

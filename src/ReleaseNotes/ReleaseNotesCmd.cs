@@ -49,11 +49,11 @@ namespace ReleaseNotes
                 Override = Override,
                 MajorVersion = SemverMajorVersion,
                 CommitId = CommitId,
-                RepositoryId = RepositoryId
+                RepositoryId = Guid.Parse(RepositoryId)
             };
 
             // Create a connection
-            appContext.Connection = new VssConnection(appContext.OrgUrl, new VssBasicCredential(string.Empty, PAT));
+            appContext.VssConnection = new VssConnection(appContext.OrgUrl, new VssBasicCredential(string.Empty, PAT));
 
             if (!string.IsNullOrEmpty(appContext.CommitId))
                 await _releaseNotesService.UpdateOrCreateReleaseNotesFromCommit(appContext, cancellationToken).ConfigureAwait(false);
@@ -102,7 +102,7 @@ namespace ReleaseNotes
         public string CommitId { get; set; } = Environment.GetEnvironmentVariable("COMMIT_ID");
 
         [Option("-repo|--repositoryId", "Repository Id", CommandOptionType.SingleValue)]
-        public string RepositoryId { get; set; } = Environment.GetEnvironmentVariable("REPOSITORY_ID");
+        public string RepositoryId { get; set; } =  Environment.GetEnvironmentVariable("REPOSITORY_ID");
 
         private static string GetVersion()
             => $"v{typeof(ReleaseNotesCmd).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion}";
