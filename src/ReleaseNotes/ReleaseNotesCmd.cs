@@ -49,7 +49,7 @@ namespace ReleaseNotes
                 Override = Override,
                 MajorVersion = SemverMajorVersion,
                 CommitId = CommitId,
-                RepositoryId = Guid.Parse(RepositoryId)
+                RepositoryId = string.IsNullOrEmpty(RepositoryId) ? Guid.Empty : Guid.Parse(RepositoryId)
             };
 
             // Create a connection
@@ -102,7 +102,7 @@ namespace ReleaseNotes
         public string CommitId { get; set; } = Environment.GetEnvironmentVariable("COMMIT_ID");
 
         [Option("-repo|--repositoryId", "Repository Id", CommandOptionType.SingleValue)]
-        public string RepositoryId { get; set; } =  Environment.GetEnvironmentVariable("REPOSITORY_ID");
+        public string RepositoryId { get; set; } = Environment.GetEnvironmentVariable("REPOSITORY_ID");
 
         private static string GetVersion()
             => $"v{typeof(ReleaseNotesCmd).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion}";
