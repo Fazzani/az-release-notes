@@ -9,19 +9,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Handlebars.Net" Version="2.0.4" />
+    <PackageReference Include="Handlebars.Net" Version="2.0.9" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
     <PackageReference Include="McMaster.Extensions.Hosting.CommandLine" Version="3.1.0" />
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.16.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.18.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-    <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="16.170.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="16.170.0" />
+    <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="16.191.0-preview" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="16.191.0-preview" />
     <PackageReference Include="Serilog" Version="2.10.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="3.3.0" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="4.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageReference Include="System.Linq.Async" Version="5.0.0" />
   </ItemGroup>
 

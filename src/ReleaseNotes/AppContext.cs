@@ -34,7 +34,6 @@ namespace ReleaseNotes
         public string IterationOffset { get; internal set; } = "0";
         public bool Override { get; internal set; }
         public string MajorVersion { get; internal set; }
-        public string CommitId { get; internal set; }
         public Guid RepositoryId { get; internal set; }
         public TeamProjectReference ReleaseNoteProjectReference { get; internal set; }
     }

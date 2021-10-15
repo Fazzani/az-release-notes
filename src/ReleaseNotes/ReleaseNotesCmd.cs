@@ -48,14 +48,13 @@ namespace ReleaseNotes
                 IterationOffset = IterationOffset,
                 Override = Override,
                 MajorVersion = SemverMajorVersion,
-                CommitId = CommitId,
                 RepositoryId = string.IsNullOrEmpty(RepositoryId) ? Guid.Empty : Guid.Parse(RepositoryId)
             };
 
             // Create a connection
             appContext.VssConnection = new VssConnection(appContext.OrgUrl, new VssBasicCredential(string.Empty, PAT));
 
-            if (!string.IsNullOrEmpty(appContext.CommitId))
+            if (!string.IsNullOrEmpty(appContext.ReleaseNoteVersion))
                 await _releaseNotesService.UpdateOrCreateReleaseNotesFromCommit(appContext, cancellationToken).ConfigureAwait(false);
             else
                 await _releaseNotesService.UpdateOrCreateReleaseNotes(appContext, cancellationToken).ConfigureAwait(false);
@@ -97,9 +96,6 @@ namespace ReleaseNotes
 
         [Option("-f|--force", "Force recreate existed wiki pages", CommandOptionType.NoValue)]
         public bool Override { get; set; } = false;
-
-        [Option("-c|--commit", "Commit Id", CommandOptionType.SingleValue)]
-        public string CommitId { get; set; } = Environment.GetEnvironmentVariable("COMMIT_ID");
 
         [Option("-repo|--repositoryId", "Repository Id", CommandOptionType.SingleValue)]
         public string RepositoryId { get; set; } = Environment.GetEnvironmentVariable("REPOSITORY_ID");

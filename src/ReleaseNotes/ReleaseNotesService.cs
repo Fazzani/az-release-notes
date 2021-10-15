@@ -49,27 +49,24 @@ namespace ReleaseNotes
                 _teamContextFactory = new TeamContextFactory(appContext.WebApiTeam.Name);
 
                 var gitClient = await appContext.VssConnection.GetClientAsync<GitHttpClient>(cancellationToken).ConfigureAwait(false);
-                var commit = await gitClient.GetCommitAsync(appContext.TeamProjectReference.Id, appContext.CommitId, appContext.RepositoryId, cancellationToken: cancellationToken).ConfigureAwait(false);
-                var wiRegex = new Regex(@"(#\d+)", RegexOptions.Multiline);
-                var match = wiRegex.Matches(commit.Comment);
-                var workItems = match.Select(x => int.Parse(x.Value.Replace("#", string.Empty))).ToList();
-                var notes = await GetWorkItemsById(witClient, workItems, cancellationToken).ToListAsync(cancellationToken).ConfigureAwait(false);
 
-                _logger.LogInformation($"{notes.Count} notes is retrieved");
+                var (workItems, startDate, endDate) = await GetWorkItemsFromLastTwoTags(appContext, gitClient, witClient, appContext.ReleaseNoteVersion, MantisColumnNames, cancellationToken).ConfigureAwait(false);
 
-                if (notes.Count > 0)
+                _logger.LogInformation($"{workItems.Count} notes is retrieved");
+
+                if (workItems.Count > 0)
                 {
                     var orgName = appContext.VssConnection.Uri.Segments[1];
                     //var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
                     var pageContent = await GenerateContent(
                         new ReleaseContent(appContext.ReleaseNotesProjectName,
-                                           default,
-                                           default,
+                                           startDate,
+                                           endDate,
                                            appContext.ReleaseNoteVersion,
+                                           new SemVer(appContext.ReleaseNoteVersion).Minor.ToString(),
+                                           _teamContextFactory.GetVelocity(workItems),
                                            default,
-                                           _teamContextFactory.GetVelocity(notes),
-                                           default,
-                                           notes),
+                                           workItems),
                         cancellationToken).ConfigureAwait(false);
                     _logger.LogInformation("A new content generated");
 
@@ -94,6 +91,63 @@ namespace ReleaseNotes
             {
                 _logger.LogError(e, e.Message);
             }
+        }
+
+        /// <summary>
+        /// Get WorkItems between the last two tags
+        /// </summary>
+        /// <param name="appContext"></param>
+        /// <param name="gitClient"></param>
+        /// <param name="witClient"></param>
+        /// <param name="refTag"></param>
+        /// <param name="mantisColumnNames"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        private static async Task<(List<WorkItemRecord> workItems, DateTime startDate, DateTime endDate)> GetWorkItemsFromLastTwoTags(AppContext appContext,
+                                                                                          GitHttpClient gitClient,
+                                                                                          WorkItemTrackingHttpClient witClient,
+                                                                                          string refTag,
+                                                                                          (string MantisId, string MantisStatus) mantisColumnNames,
+                                                                                          CancellationToken cancellationToken)
+        {
+            var semVerComparer = new SemVerComparer();
+            var allTRepoTags = await gitClient.GetTagRefsAsync(appContext.RepositoryId).ConfigureAwait(false);
+            var currentTag = allTRepoTags.FirstOrDefault(x => x.Name.Contains(refTag));
+
+            if (currentTag is null)
+                throw new Exception($"{refTag} tag not found into {appContext.RepositoryId} repository");
+
+            var tags = allTRepoTags
+                .Where(x => x.Name.StartsWith($"refs/tags/{appContext.MajorVersion}"))
+                .OrderByDescending(x => x.Name, semVerComparer);
+
+            GitRef secondLastTag = null;
+
+            foreach (var item in tags)
+            {
+                if (semVerComparer.Compare(item.Name, currentTag.Name) < 0)
+                {
+                    secondLastTag = item;
+                    break;
+                }
+            }
+
+            var currentTagCommit = await gitClient.GetAnnotatedTagAsync(appContext.TeamProjectReference.Id, appContext.RepositoryId, currentTag.ObjectId, appContext.RepositoryId, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var secondTagCommit = await gitClient.GetAnnotatedTagAsync(appContext.TeamProjectReference.Id, appContext.RepositoryId, secondLastTag.ObjectId, appContext.RepositoryId, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            var commits = await gitClient.GetCommitsAsync(appContext.TeamProjectReference.Id, appContext.RepositoryId, new GitQueryCommitsCriteria
+            {
+                CompareVersion = new GitVersionDescriptor { Version = refTag, VersionType = GitVersionType.Tag },
+                ItemVersion = new GitVersionDescriptor { Version = secondLastTag.Name.Split('/').Last(), VersionType = GitVersionType.Tag },
+                IncludeWorkItems = true
+            }, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return (commits
+                    .SelectMany(x => x.WorkItems)
+                    .Select(wi => Extension.AzWorkItemToWorkItemRecord(witClient.GetWorkItemAsync(Int32.Parse(wi.Id), cancellationToken: cancellationToken).Result, mantisColumnNames))
+                    .ToList(),
+                currentTagCommit.TaggedBy.Date,
+                secondTagCommit.TaggedBy.Date);
         }
 
         public async Task UpdateOrCreateReleaseNotes(AppContext appContext, CancellationToken cancellationToken = default)
@@ -226,13 +280,7 @@ namespace ReleaseNotes
             foreach (var item in res.WorkItems)
             {
                 var workitem = await witClient.GetWorkItemAsync(item.Id, cancellationToken: cancellationToken).ConfigureAwait(false);
-                var originalEstimate = 0;
                 var storyPoint = 0;
-
-                if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.OriginalEstimate", out var originalEstimateValue))
-                {
-                    originalEstimate = Convert.ToInt32(originalEstimateValue);
-                }
 
                 if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StoryPoints", out var storyPointValue))
                 {
@@ -243,7 +291,6 @@ namespace ReleaseNotes
                     workitem.Id,
                     workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
                     Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()),
-                    originalEstimate,
                     storyPoint,
                     workitem.Fields["System.BoardColumn"].ToString(),
                     workitem.Fields.ContainsKey(MantisColumnNames.MantisStatus) && !string.IsNullOrEmpty(workitem.Fields[MantisColumnNames.MantisStatus].ToString()),
@@ -258,13 +305,7 @@ namespace ReleaseNotes
             foreach (var item in workitemsId)
             {
                 var workitem = await witClient.GetWorkItemAsync(item, cancellationToken: cancellationToken).ConfigureAwait(false);
-                var originalEstimate = 0;
                 var storyPoint = 0;
-
-                if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.OriginalEstimate", out var originalEstimateValue))
-                {
-                    originalEstimate = Convert.ToInt32(originalEstimateValue);
-                }
 
                 if (workitem.Fields.TryGetValue("Microsoft.VSTS.Scheduling.StoryPoints", out var storyPointValue))
                 {
@@ -275,7 +316,6 @@ namespace ReleaseNotes
                     workitem.Id,
                     workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
                     Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()),
-                    originalEstimate,
                     storyPoint,
                     workitem.Fields.ContainsKey("System.BoardColumn") ? workitem.Fields["System.BoardColumn"].ToString() : string.Empty,
                     workitem.Fields.ContainsKey(MantisColumnNames.MantisStatus) && !string.IsNullOrEmpty(workitem.Fields[MantisColumnNames.MantisStatus].ToString()),
