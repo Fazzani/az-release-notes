@@ -2,7 +2,7 @@
   "profiles": {
     "ReleaseNotes": {
       "commandName": "Project",
-      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.Financeur -r Up.France.Financeur.Uptimise -t \"Up.France.Financeur Uptimise\" -n \"Home/Releases Notes/\" -q \"3953d752-eb73-49da-b590-d8e624a65095\" -i -1 -f -d"
+      "commandLineArgs": "-o \"https://dev.azure.com/up-group\" -p Up.France.Financeur -r Up.France.Financeur -t \"Up.France.Financeur Uptimise\" -n \"Home/Releases Notes/\" -q \"3953d752-eb73-49da-b590-d8e624a65095\" -i -1 -f -d"
     }
   }
 }

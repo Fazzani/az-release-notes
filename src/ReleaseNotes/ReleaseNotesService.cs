@@ -41,12 +41,12 @@ namespace ReleaseNotes
             {
                 appContext.TeamProjectReference = await GetTeamProjectByNameAsync(appContext.VssConnection.GetClient<ProjectHttpClient>(), appContext.VssProjectName).ConfigureAwait(false);
                 appContext.ReleaseNoteProjectReference = await GetTeamProjectByNameAsync(appContext.VssConnection.GetClient<ProjectHttpClient>(), appContext.ReleaseNotesProjectName).ConfigureAwait(false);
-                appContext.WebApiTeam = await GetTeamByNameAsync(appContext.VssConnection,
-                                                                 appContext.TeamProjectReference.Id,
-                                                                 teamName: appContext.TeamName,
-                                                                 cancellationToken).ConfigureAwait(false);
+                appContext.ReleaseNoteWebApiTeam = await GetTeamByNameAsync(appContext.VssConnection,
+                                                                            appContext.ReleaseNoteProjectReference.Id,
+                                                                            teamName: appContext.ReleaseNotesTeamName,
+                                                                            cancellationToken).ConfigureAwait(false);
 
-                _teamContextFactory = new TeamContextFactory(appContext.WebApiTeam.Name);
+                _teamContextFactory = new TeamContextFactory(appContext.ReleaseNoteWebApiTeam.Name);
 
                 var gitClient = await appContext.VssConnection.GetClientAsync<GitHttpClient>(cancellationToken).ConfigureAwait(false);
 
@@ -104,11 +104,11 @@ namespace ReleaseNotes
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         private static async Task<(List<WorkItemRecord> workItems, DateTime startDate, DateTime endDate)> GetWorkItemsFromLastTwoTags(AppContext appContext,
-                                                                                          GitHttpClient gitClient,
-                                                                                          WorkItemTrackingHttpClient witClient,
-                                                                                          string refTag,
-                                                                                          (string MantisId, string MantisStatus) mantisColumnNames,
-                                                                                          CancellationToken cancellationToken)
+                                                                                                                                      GitHttpClient gitClient,
+                                                                                                                                      WorkItemTrackingHttpClient witClient,
+                                                                                                                                      string refTag,
+                                                                                                                                      (string MantisId, string MantisStatus) mantisColumnNames,
+                                                                                                                                      CancellationToken cancellationToken)
         {
             var semVerComparer = new SemVerComparer();
             var allTRepoTags = await gitClient.GetTagRefsAsync(appContext.RepositoryId).ConfigureAwait(false);
@@ -157,12 +157,14 @@ namespace ReleaseNotes
             try
             {
                 appContext.TeamProjectReference = await GetTeamProjectByNameAsync(appContext.VssConnection.GetClient<ProjectHttpClient>(), appContext.VssProjectName).ConfigureAwait(false);
-                appContext.WebApiTeam = await GetTeamByNameAsync(appContext.VssConnection,
-                                                                 appContext.TeamProjectReference.Id,
-                                                                 teamName: appContext.TeamName,
+                appContext.ReleaseNoteProjectReference = await GetTeamProjectByNameAsync(appContext.VssConnection.GetClient<ProjectHttpClient>(), appContext.ReleaseNotesProjectName).ConfigureAwait(false);
+
+                appContext.ReleaseNoteWebApiTeam = await GetTeamByNameAsync(appContext.VssConnection,
+                                                                 appContext.ReleaseNoteProjectReference.Id,
+                                                                 teamName: appContext.ReleaseNotesTeamName,
                                                                  cancellationToken).ConfigureAwait(false);
 
-                _teamContextFactory = new TeamContextFactory(appContext.WebApiTeam.Name);
+                _teamContextFactory = new TeamContextFactory(appContext.ReleaseNoteWebApiTeam.Name);
 
                 var selectedIterations = await GetSelectedIterations(appContext, cancellationToken).ConfigureAwait(false);
 
@@ -177,7 +179,7 @@ namespace ReleaseNotes
                     {
                         var version = GetVersionBySprintStrategy(appContext, iter, appContext.MajorVersion);
                         var orgName = appContext.VssConnection.Uri.Segments[1];
-                        var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.TeamName, iter.Path));
+                        var sprintLink = Uri.EscapeUriString(string.Format(_sprintUrlFormat, orgName, appContext.TeamProjectReference.Name, appContext.ReleaseNotesTeamName, iter.Path));
                         var pageContent = await GenerateContent(
                             new ReleaseContent(appContext.ReleaseNotesProjectName,
                                                iter.Attributes.StartDate,
@@ -198,10 +200,10 @@ namespace ReleaseNotes
                         {
                             var pagePath = $"{appContext.PageReleaseNotePath}{version}";
                             _logger.LogInformation($"Creating new release notes page at {pagePath}");
-                            var (pageResponse, azureAction) = await Wiki.Wiki.GetOrCreateWikiPage(appContext.VssConnection, appContext.TeamProjectReference.Id, pagePath).ConfigureAwait(false);
+                            var (pageResponse, azureAction) = await Wiki.Wiki.GetOrCreateWikiPage(appContext.VssConnection, appContext.ReleaseNoteProjectReference.Id, pagePath).ConfigureAwait(false);
                             if (azureAction == Wiki.Wiki.AzureDevopsActionEnum.Update && !appContext.Override)
                                 return;
-                            var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.VssConnection, appContext.TeamProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
+                            var wikiResponse = await Wiki.Wiki.EditWikiPageById(appContext.VssConnection, appContext.ReleaseNoteProjectReference.Id, pageResponse.Page.Id.Value, new MemoryStream(Encoding.UTF8.GetBytes(pageContent ?? ""))).ConfigureAwait(false);
                             _logger.LogInformation($"New Release notes page was created here {wikiResponse.Page.RemoteUrl}");
                             Console.WriteLine($"##vso[task.complete result=Succeeded;]{wikiResponse.Page.RemoteUrl}");
                         }
@@ -275,7 +277,7 @@ namespace ReleaseNotes
                                                                    [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var q = await GetQuery(witClient, appContext, iter, cancellationToken).ConfigureAwait(false);
-            var res = await witClient.QueryByWiqlAsync(q, appContext.TeamContext, top: 100, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var res = await witClient.QueryByWiqlAsync(q, appContext.ReleaseNoteTeamContext, top: 100, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             foreach (var item in res.WorkItems)
             {
@@ -360,7 +362,7 @@ namespace ReleaseNotes
                                                                                    CancellationToken cancellationToken = default)
         {
             var client = appContext.VssConnection.GetClient<WorkHttpClient>(cancellationToken);
-            return client.GetTeamIterationsAsync(appContext.TeamContext, cancellationToken: cancellationToken);
+            return client.GetTeamIterationsAsync(appContext.ReleaseNoteTeamContext, cancellationToken: cancellationToken);
         }
 
         private static TeamSettingsIteration GetIterationByIndex(int iterationOffset, List<TeamSettingsIteration> iterations)

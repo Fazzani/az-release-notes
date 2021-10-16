@@ -38,7 +38,7 @@ namespace ReleaseNotes
             var appContext = new AppContext
             {
                 OrgUrl = uri,
-                TeamName = TeamName,
+                ReleaseNotesTeamName = ReleaseNotesTeamName,
                 PageReleaseNotePath = PageReleaseNotePath,
                 VssProjectName = VssProjectName,
                 ReleaseNotesProjectName = ReleaseNotesProjectName,
@@ -64,17 +64,23 @@ namespace ReleaseNotes
         [Option("-o|--organization", "Azure devops organization url", CommandOptionType.SingleValue)]
         public string OrgUrl { get; } = Environment.GetEnvironmentVariable("SYSTEM_COLLECTIONURI");
 
+        [Option(Description = "Personal access token", ShortName = "x")]
+        public string PAT { get; set; } = Environment.GetEnvironmentVariable(AppContext.PAT_NAME);
+
         [Option("-p|--project", "Azure devops project name", CommandOptionType.SingleValue)]
         public string VssProjectName { get; set; } = Environment.GetEnvironmentVariable("SYSTEM_TEAMPROJECT");
+
+        [Option("-repo|--repositoryId", "Repository Id", CommandOptionType.SingleValue)]
+        public string RepositoryId { get; set; } = Environment.GetEnvironmentVariable("REPOSITORY_ID");
 
         [Option(Description = "Azure devops wiki project name", ShortName = "r")]
         public string ReleaseNotesProjectName { get; set; }
 
-        [Option("-t|--team", "Wiki team name", CommandOptionType.SingleValue)]
-        public string TeamName { get; set; }
-
-        [Option(Description = "Personal access token", ShortName = "x")]
-        public string PAT { get; set; } = Environment.GetEnvironmentVariable(AppContext.PAT_NAME);
+        /// <summary>
+        /// Wiki/Board TeamName
+        /// </summary>
+        [Option("-t|--team", "Azure devops wiki team name", CommandOptionType.SingleValue)]
+        public string ReleaseNotesTeamName { get; set; }
 
         [Option(Description = "Release notes page path", ShortName = "n")]
         public string PageReleaseNotePath { get; set; }
@@ -96,9 +102,6 @@ namespace ReleaseNotes
 
         [Option("-f|--force", "Force recreate existed wiki pages", CommandOptionType.NoValue)]
         public bool Override { get; set; } = false;
-
-        [Option("-repo|--repositoryId", "Repository Id", CommandOptionType.SingleValue)]
-        public string RepositoryId { get; set; } = Environment.GetEnvironmentVariable("REPOSITORY_ID");
 
         private static string GetVersion()
             => $"v{typeof(ReleaseNotesCmd).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion}";

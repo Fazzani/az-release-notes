@@ -122,9 +122,9 @@ namespace ReleaseNotes.Wiki
 
         public static WikiPageResponse CreatePage(VssConnection connection, WikiV2 wiki, string path)
         {
-            WikiHttpClient wikiClient = connection.GetClient<WikiHttpClient>();
+            var wikiClient = connection.GetClient<WikiHttpClient>();
 
-            WikiPageCreateOrUpdateParameters parameters = new WikiPageCreateOrUpdateParameters()
+            var parameters = new WikiPageCreateOrUpdateParameters
             {
                 Content = "# Wiki page content"
             };

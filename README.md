@@ -17,7 +17,7 @@ source <(wget --no-cache -qO- https://gist.github.com/Fazzani/0c8a6d8344aef3256a
 
 rnotes --help
 
-![help](https://i.imgur.com/i3VN09Q.png)
+![help](https://i.imgur.com/WWoDkIK.png)
 
 ## Examples
 
