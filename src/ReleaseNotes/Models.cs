@@ -41,7 +41,7 @@ namespace ReleaseNotes
                 workitem.Links.Links["html"] is ReferenceLink link ? link.Href : string.Empty,
                 Extensions.WorkItemTypeFromString(workitem.Fields["System.WorkItemType"].ToString()),
                 storyPoint,
-                workitem.Fields["System.BoardColumn"].ToString(),
+                workitem.Fields.ContainsKey("System.BoardColumn") ? workitem.Fields["System.BoardColumn"].ToString() : string.Empty,
                 workitem.Fields.ContainsKey(mantisColumnNames.MantisStatus) && !string.IsNullOrEmpty(workitem.Fields[mantisColumnNames.MantisStatus].ToString()),
                 workitem.Fields.ContainsKey(mantisColumnNames.MantisId) ? workitem.Fields[mantisColumnNames.MantisId].ToString() : string.Empty);
         }

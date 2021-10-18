@@ -145,6 +145,7 @@ namespace ReleaseNotes
             return (commits
                     .SelectMany(x => x.WorkItems)
                     .Select(wi => Extension.AzWorkItemToWorkItemRecord(witClient.GetWorkItemAsync(Int32.Parse(wi.Id), cancellationToken: cancellationToken).Result, mantisColumnNames))
+                    .Distinct()
                     .ToList(),
                 currentTagCommit.TaggedBy.Date,
                 secondTagCommit.TaggedBy.Date);
