@@ -48,13 +48,14 @@ namespace ReleaseNotes
                 IterationOffset = IterationOffset,
                 Override = Override,
                 MajorVersion = SemverMajorVersion,
-                RepositoryId = string.IsNullOrEmpty(RepositoryId) ? Guid.Empty : Guid.Parse(RepositoryId)
+                ForceSelectIterationByTag = ForceGetByTag,
+                RepositoryId = RepositoryId
             };
 
             // Create a connection
             appContext.VssConnection = new VssConnection(appContext.OrgUrl, new VssBasicCredential(string.Empty, PAT));
 
-            if (!string.IsNullOrEmpty(appContext.ReleaseNoteVersion))
+            if (!string.IsNullOrEmpty(appContext.ReleaseNoteVersion) && appContext.SemVersion.Patch != 0)
                 await _releaseNotesService.UpdateOrCreateReleaseNotesFromCommit(appContext, cancellationToken).ConfigureAwait(false);
             else
                 await _releaseNotesService.UpdateOrCreateReleaseNotes(appContext, cancellationToken).ConfigureAwait(false);
@@ -70,7 +71,7 @@ namespace ReleaseNotes
         [Option("-p|--project", "Azure devops project name", CommandOptionType.SingleValue)]
         public string VssProjectName { get; set; } = Environment.GetEnvironmentVariable("SYSTEM_TEAMPROJECT");
 
-        [Option("-repo|--repositoryId", "Repository Id", CommandOptionType.SingleValue)]
+        [Option("-repo|--repositoryId", "Repository Id or Name", CommandOptionType.SingleValue)]
         public string RepositoryId { get; set; } = Environment.GetEnvironmentVariable("REPOSITORY_ID");
 
         [Option(Description = "Azure devops wiki project name", ShortName = "r")]
@@ -96,6 +97,9 @@ namespace ReleaseNotes
 
         [Option("-i|--iteration", "Iteration offset (ex: +1, -1). The arg maybe be a rang (ex: .., 1..3) ", CommandOptionType.SingleValue)]
         public string IterationOffset { get; set; } = "0";
+
+        [Option("--force-by-tag", "Force select iteration by tag version", CommandOptionType.NoValue)]
+        public bool ForceGetByTag { get; set; } = true;
 
         [Option("-d|--dry", "If true, the generated release content will be displayed on console", CommandOptionType.NoValue)]
         public bool DryRun { get; set; } = false;

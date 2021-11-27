@@ -16,6 +16,7 @@ using Microsoft.TeamFoundation.Work.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.WebApi;
+using ReleaseNotes.utils;
 
 namespace ReleaseNotes
 {
@@ -111,11 +112,19 @@ namespace ReleaseNotes
                                                                                                                                       CancellationToken cancellationToken)
         {
             var semVerComparer = new SemVerComparer();
-            var allTRepoTags = await gitClient.GetTagRefsAsync(appContext.RepositoryId).ConfigureAwait(false);
+            if (!Guid.TryParse(appContext.RepositoryId, out var repoId))
+            {
+                var repo = await gitClient.GetRepositoryAsync(appContext.VssProjectName, appContext.RepositoryId, cancellationToken: cancellationToken).ConfigureAwait(false);
+                if (repo == null)
+                    throw new ReleaseNoteException($"Git Repository {appContext.RepositoryId} not found");
+                repoId = repo.Id;
+            }
+
+            var allTRepoTags = await gitClient.GetTagRefsAsync(repoId).ConfigureAwait(false);
             var currentTag = allTRepoTags.FirstOrDefault(x => x.Name.Contains(refTag));
 
             if (currentTag is null)
-                throw new Exception($"{refTag} tag not found into {appContext.RepositoryId} repository");
+                throw new ReleaseNoteException($"{refTag} tag not found into {appContext.RepositoryId} repository");
 
             var tags = allTRepoTags
                 .Where(x => x.Name.StartsWith($"refs/tags/{appContext.MajorVersion}"))
@@ -221,6 +230,19 @@ namespace ReleaseNotes
                                                                           CancellationToken cancellationToken)
         {
             var allIterations = await GetIterationsByProjectAsync(appContext, cancellationToken).ConfigureAwait(false);
+
+            if (appContext.ForceSelectIterationByTag && appContext.SemVersion != null)
+            {
+                foreach (var iter in allIterations)
+                {
+                    var m = Regex.Match(iter.Name, appContext.IterationVersionRegex);
+                    if (m.Success && Convert.ToInt32(m.Groups[1].Value) == appContext.SemVersion.Minor)
+                    {
+                        return new[] { iter };
+                    }
+                }
+            }
+
             var selectedIter = allIterations.ToArray();
 
             if (Int32.TryParse(appContext.IterationOffset, out int iterIndex))
