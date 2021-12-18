@@ -38,10 +38,13 @@ namespace ReleaseNotes
             var aSemVer = new SemVer(a);
             var bSemVer = new SemVer(b);
 
-            if (aSemVer.Major < bSemVer.Major || (aSemVer.Minor < bSemVer.Minor) || aSemVer.Patch < bSemVer.Patch)
-                return -1;
-
-            return 1;
+            var c = aSemVer.Major.CompareTo(bSemVer.Major);
+            if (c != 0) return c;
+            c = aSemVer.Minor.CompareTo(bSemVer.Minor);
+            if (c != 0) return c;
+            c = aSemVer.Patch.CompareTo(bSemVer.Patch);
+            if (c != 0) return c;
+            return -1;
         }
     }
 }

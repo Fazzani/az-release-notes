@@ -128,7 +128,7 @@ namespace ReleaseNotes
 
             var tags = allTRepoTags
                 .Where(x => x.Name.StartsWith($"refs/tags/{appContext.MajorVersion}"))
-                .OrderByDescending(x => x.Name, semVerComparer);
+                .OrderByDescending(x => x.Name, semVerComparer).ToList();
 
             GitRef secondLastTag = null;
 
